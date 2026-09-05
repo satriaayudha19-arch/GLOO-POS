@@ -1,0 +1,137 @@
+{
+  "project_name": "GLOO POS",
+  "archetype": "THE PERFORMANCE PRO (F&B Modern Cafe Counter & Multi-Tenant POS)",
+  "theme": "Dark Professional POS Theme",
+  "app_type": "dashboard_pos_saas",
+  "file_type_convention": "JavaScript (.js / .jsx)",
+  "typography": {
+    "font_family_heading": "Outfit, Sora, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "google_fonts_import": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
+    "scale": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold tracking-tight",
+      "h4": "text-lg sm:text-xl font-semibold tracking-snug",
+      "body": "text-sm sm:text-base font-normal leading-relaxed",
+      "small": "text-xs sm:text-sm font-medium",
+      "mono_price": "font-mono font-bold tracking-tight"
+    }
+  },
+  "colors": {
+    "mode": "dark",
+    "background": {
+      "app": "#0D0E12",
+      "surface": "#16181E",
+      "surface_elevated": "#1E222B",
+      "surface_active": "#2A2F3B",
+      "overlay": "rgba(13, 14, 18, 0.85)"
+    },
+    "text": {
+      "primary": "#F3F4F6",
+      "secondary": "#9CA3AF",
+      "muted": "#6B7280",
+      "inverse": "#0D0E12"
+    },
+    "brand": {
+      "primary": "#F59E0B",
+      "primary_hover": "#D97706",
+      "primary_foreground": "#000000",
+      "secondary": "#3B82F6",
+      "secondary_foreground": "#FFFFFF"
+    },
+    "status": {
+      "online_green": "#10B981",
+      "offline_red": "#EF4444",
+      "pending_amber": "#F59E0B",
+      "preparing_blue": "#3B82F6",
+      "ready_purple": "#8B5CF6",
+      "completed_emerald": "#059669"
+    },
+    "border": {
+      "default": "#262B36",
+      "subtle": "#1F242E",
+      "focused": "#F59E0B"
+    }
+  },
+  "spacing_and_layout": {
+    "grid_mode": "MODE B: High Density Grid (Dashboards & POS Transaction Counter)",
+    "pos_transaction_layout": {
+      "type": "Dual Pane / 3-Column Split",
+      "sidebar": "col-span-12 lg:col-span-1 xl:col-span-1 (Mini vertical navigation with icons for POS, Orders, Kitchen, Shift, Settings)",
+      "catalog_pane": "col-span-12 lg:col-span-7 xl:col-span-8 (Category scroll + Search bar + High-density touchable Product Cards grid)",
+      "cart_pane": "col-span-12 lg:col-span-4 xl:col-span-3 (Sticky live cart order list, item line modifiers, discounts, totals, payment action bar)"
+    },
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6",
+    "touch_targets": {
+      "pos_product_card": "min-h-[110px] p-3.5 rounded-xl flex flex-col justify-between cursor-pointer border border-[#262B36] bg-[#16181E] hover:bg-[#1E222B] active:scale-[0.98] transition-all duration-150 select-none",
+      "category_pill": "px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap min-h-[44px] flex items-center gap-2 select-none",
+      "numpad_button": "h-14 md:h-16 text-xl font-bold rounded-xl border border-[#262B36] bg-[#1E222B] hover:bg-[#2A2F3B] active:bg-[#F59E0B] active:text-black transition-all"
+    }
+  },
+  "components": {
+    "header_nav": {
+      "style": "sticky top-0 z-40 bg-[#16181E]/95 backdrop-blur-md border-b border-[#262B36] px-4 py-2.5 flex items-center justify-between",
+      "elements": [
+        "Brand Logo & Tenant Name Dropdown",
+        "Outlet Switcher Badge",
+        "Online/Offline Status Indicator (dot + pill)",
+        "Active Shift Counter / Cashier Name",
+        "PWA Install Button / Status",
+        "User Quick Avatar & Settings shortcut"
+      ]
+    },
+    "pos_cart": {
+      "container": "bg-[#16181E] border border-[#262B36] rounded-2xl flex flex-col h-[calc(100vh-80px)] sticky top-20 shadow-xl overflow-hidden",
+      "header": "p-4 border-b border-[#262B36] flex justify-between items-center bg-[#1E222B]",
+      "items_list": "flex-1 overflow-y-auto p-3 space-y-2 divide-y divide-[#262B36]/50",
+      "summary_footer": "p-4 border-t border-[#262B36] bg-[#121419] space-y-3"
+    },
+    "payment_modal": {
+      "backdrop": "fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4",
+      "dialog": "bg-[#16181E] border border-[#262B36] w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-6 text-foreground",
+      "tender_options": "grid grid-cols-2 sm:grid-cols-4 gap-3",
+      "quick_cash_buttons": "flex gap-2"
+    },
+    "receipt_view": {
+      "style": "bg-[#FAF8F5] text-[#111111] font-mono text-sm p-6 rounded-lg max-w-sm mx-auto border border-amber-200 shadow-lg space-y-4"
+    }
+  },
+  "motion_and_interactions": {
+    "tactile_feedback": "Active scale transform (scale-95 to scale-98) on product cards, category tabs, and payment keys",
+    "cart_item_enter": "Animate slide-in-right and fade-in when adding items to cart",
+    "modal_animation": "Framer Motion ease-out scale and opacity transition (0.15s)",
+    "status_pulse": "Pulse dot indicator for real-time kitchen orders and offline sync status"
+  },
+  "accessibility_and_testing": {
+    "data_testid_convention": "kebab-case, role-based, e.g. data-testid='pos-product-card-123', data-testid='cart-checkout-button', data-testid='online-status-badge', data-testid='quick-cash-20'",
+    "keyboard_shortcuts": "Number keys for quick numpad, Enter for Pay, Esc for Clear/Close Modal, Space for Search",
+    "contrast_compliance": "All normal text contrast > 4.5:1 on dark surfaces, active CTA text strictly high-contrast dark on light amber button"
+  },
+  "image_urls": [
+    {
+      "category": "pos_header_hero",
+      "description": "Modern dark aesthetic cafe espresso machine counter",
+      "url": "https://images.unsplash.com/photo-1738894715313-9f952be758b0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjBjYWZlJTIwZXNwcmVzc28lMjByZXN0YXVyYW50JTIwZm9vZCUyMGRpc3BsYXklMjBjb3VudGVyfGVufDB8fHx8MTc4ODYwNTU2M3ww&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "sample_bakery_product",
+      "description": "Fresh butter croissant and espresso coffee product showcase",
+      "url": "https://images.unsplash.com/photo-1515823662972-da6a2e4d3002?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwyfHxlc3ByZXNzbyUyMGNvZmZlZSUyMGNyb2lzc2FudCUyMGJha2VyeSUyMHByb2R1Y3QlMjBwaG90b3xlbnwwfHx8fDE3ODg2MDU1NzB8MA&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "sample_beverage_product",
+      "description": "Iced artisan coffee latte beverage showcase",
+      "url": "https://images.unsplash.com/photo-1479894127662-a987d1e38f82?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHw0fHxlc3ByZXNzbyUyMGNvZmZlZSUyMGNyb2lzc2FudCUyMGJha2VyeSUyMHByb2R1Y3QlMjBwaG90b3xlbnwwfHx8fDE3ODg2MDU1NzB8MA&ixlib=rb-4.1.0&q=85"
+    }
+  ],
+  "instructions_to_main_agent": [
+    "Ensure dark mode is applied by default via class='dark' on the root element or document element.",
+    "Do not use transparent backgrounds for drop-down menus, select triggers, or header overlays; use semi-opaque `#16181E` with backdrop blur.",
+    "Implement data-testid attributes on all interactive elements: buttons, category tabs, cart items, payment triggers, and search inputs.",
+    "Use Lucide React icons for clean POS controls (e.g., ShoppingBag, CreditCard, Coffee, Layers, DollarSign, Wifi, WifiOff, RefreshCw, User, Settings, Shield).",
+    "Keep touch areas large (minimum 44x44px for buttons, 110px height for product cards) for quick counter tapping.",
+    "Make sure code is written in React JavaScript (.js / .jsx) standard without TypeScript syntax issues."
+  ]
+}

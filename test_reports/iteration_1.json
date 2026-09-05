@@ -1,0 +1,46 @@
+{
+  "summary": "Comprehensive full-stack testing of GLOO POS iteration 1. All 14 requested flows verified end-to-end via public URL. Backend smoke suite (13/13 tests) covers auth, RBAC, POS catalog, subscription, platform, PWA static assets, and txn number format. Frontend Playwright covered: invalid login error, cashier login+dashboard+nav-gating+online-indicator, full POS flow (open-shift already open, product grid with Coffee/Tea/Food/Snack, Latte variant modal with Large+Extra Shot, cart total Rp 43.000, subtotal+10% tax+5% service = Rp 49.450, cash payment with Exact button, receipt modal with T001-O01-U003-YYYYMMDD-HHMMSS-NNNNNN, Print/New Sale buttons), cashier orders list (no Void button — correct RBAC), owner login (Management/Operations/Team/Settings sidebar groups), Subscription page (Pro/ACTIVE, Outlets 2/10, Users 4/50, all 10 features enabled incl Advanced Reports), categories create, cashier shift page (current shift, cash in/out, history, daily journal), users & roles (4 seed users), owner void PAID order → status VOID with success toast, platform admin (Tenants list with plan/status/usage, Subscription modal opens with plan/status/reason inputs), Plans page (all 4 plans FREE/BASIC/PRO/ENTERPRISE with features and outlet/user limits), mobile 390px POS (no horizontal overflow, stacked layout).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Login page", "issue": "React warning: 'Cannot update a component (BrowserRouter) while rendering a different component (Login)' — a setState is being called during Login render (likely useEffect or redirect logic dispatched during render). Harmless in prod but should be fixed to avoid concurrent-mode issues.", "selector": "src/pages/Login.jsx", "priority": "LOW"},
+      {"component": "Platform Tenants subscription modal", "issue": "Modal container is missing role=\"dialog\" attribute (queried with document.querySelector('[role=\"dialog\"]') returned null). Minor accessibility issue — screen readers won't announce it correctly.", "selector": "Platform tenants → Subscription action", "priority": "LOW"},
+      {"component": "Platform Plans page", "issue": "Plan cards (FREE/BASIC/PRO/ENTERPRISE) have no visible Edit affordance — no 'Edit' button or hover indicator. User discovers edit only by clicking the whole card. Consider adding an explicit Edit button/icon per card.", "selector": "/platform/plans plan cards", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Receipt / Orders list", "issues": ["Transaction number 'T001-O01-U003-...' rendered in monospace font where capital O and digit 0 look nearly identical, causing potential ambiguity when reading. Consider using a font with disambiguated O/0 or adding subtle color/weight differentiation."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_smoke_test.py",
+    "/app/test_reports/pytest/smoke.xml"
+  ],
+  "action_items": [
+    "(LOW) Fix Login.jsx setState-in-render React warning",
+    "(LOW) Add role=\"dialog\" to platform tenant Subscription modal container",
+    "(LOW) Add explicit 'Edit' button/icon on platform plan cards so users know cards are clickable to edit"
+  ],
+  "critical_code_review_comments": [
+    "Auth flow uses httpOnly cookies over https as expected; API also accepts Bearer tokens — good.",
+    "Txn number format from API: T001-O01-U003-YYYYMMDD-HHMMSS-NNNNNN matches spec exactly (verified via /api/orders).",
+    "Server-authoritative totals confirmed: cart Rp 43.000 subtotal → tax 10% Rp 4.300 → service 5% Rp 2.150 → total Rp 49.450 correctly computed.",
+    "RBAC correctly gated: cashier sees only POS/Orders/Cashier Shift/Settings; no Void button; blocked from /api/platform/tenants (401/403).",
+    "Tenant isolation and subscription entitlements previously verified per main agent (27/27). No regressions observed.",
+    "PWA: manifest.json and /sw.js both serve 200. Service worker registration only in prod build (expected per note).",
+    "Multiple leftover 'Limit Test' tenants (T002/T003/T004) exist in DB from prior FREE-plan limit tests — consider a cleanup script or teardown fixture in seed.py to avoid cluttering platform tenant list."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_smoke_test.py"
+  ],
+  "success_rate": {"backend": "100% (13/13 smoke + prior 27/27 acceptance)", "frontend": "~95% (all 14 flows pass; 3 low-priority polish items)"},
+  "test_credentials": "All 5 credentials in /app/memory/test_credentials.md work correctly.",
+  "seed_data_creation": "Test-run artifacts created during QA: (1) new PAID order T001-O01-U003-20260905-112739-000006 for Rp 49.450 (subsequently voided by owner test); (2) one test category with name like 'TESTCAT_QA_<epoch>' created via owner UI (not deleted).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend smoke suite lives at /app/backend/tests/backend_smoke_test.py — reusable. Multi-login within a single Playwright session is flaky (cookies + redirect racing) — prefer fresh page.goto to /login per role and always await wait_for_selector on the email input. Note residual 'Limit Test' tenants T002/T003/T004 (FREE) exist from earlier limit tests. Cashier at Outlet Jakarta always has an open shift; expect no open-shift modal.",
+  "rca of the issue": "N/A — no critical bugs found. Two React warnings ('Cannot update a component while rendering a different component' in Login) originate from calling navigate()/setState synchronously during Login render instead of inside useEffect. Fix: wrap the redirect-if-authenticated logic in useEffect."
+}
