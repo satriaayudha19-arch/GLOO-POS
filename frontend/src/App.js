@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import DashboardPage from "@/pages/DashboardPage";
 import POSPage from "@/pages/POSPage";
 import OrdersPage from "@/pages/OrdersPage";
+import ReportsPage from "@/pages/ReportsPage";
 import OutletsPage from "@/pages/management/OutletsPage";
 import CategoriesPage from "@/pages/management/CategoriesPage";
 import ProductsPage from "@/pages/management/ProductsPage";
@@ -65,6 +66,7 @@ function TenantApp() {
           <Route path="/" element={<Protected perm="dashboard.view"><DashboardPage /></Protected>} />
           <Route path="/pos" element={<Protected perm="pos.use"><POSPage /></Protected>} />
           <Route path="/orders" element={<Protected perm="orders.view"><OrdersPage /></Protected>} />
+          <Route path="/reports" element={<Protected perm="reports.view"><ReportsPage /></Protected>} />
           <Route path="/management/outlets" element={<Protected perm="outlets.view"><OutletsPage /></Protected>} />
           <Route path="/management/categories" element={<Protected perm="catalog.manage"><CategoriesPage /></Protected>} />
           <Route path="/management/products" element={<Protected perm="catalog.manage"><ProductsPage /></Protected>} />

@@ -6,14 +6,14 @@ from starlette.middleware.cors import CORSMiddleware
 
 from database import db, client, run_with_database_retry
 from seed import seed_all
-from routers import auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings
+from routers import auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GLOO POS API")
 
-for r in (auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings):
+for r in (auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports):
     app.include_router(r.router)
 
 

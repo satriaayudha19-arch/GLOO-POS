@@ -10,12 +10,14 @@ import requests
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://env-setup-backend.preview.emergentagent.com").rstrip("/")
 
-CASHIER = {"email": "cashier@gloo.demo", "password": "GlooDemo2026!"}
-OWNER = {"email": "satriaayudha19@gmail.com", "password": "GlooPOS2026!"}
-PLATFORM = {"email": "platform@gloo.pos", "password": "GlooPlatform2026!"}
+CASHIER = {"email": os.environ.get("TEST_CASHIER_EMAIL", "cashier@gloo.demo"), "password": os.environ.get("TEST_CASHIER_PASSWORD")}
+OWNER = {"email": os.environ.get("TEST_OWNER_EMAIL", "satriaayudha19@gmail.com"), "password": os.environ.get("TEST_OWNER_PASSWORD")}
+PLATFORM = {"email": os.environ.get("TEST_PLATFORM_EMAIL", "platform@gloo.pos"), "password": os.environ.get("TEST_PLATFORM_PASSWORD")}
 
 
 def _login(creds):
+    if not creds.get("password"):
+        pytest.skip("Set test account passwords in TEST_*_PASSWORD environment variables")
     s = requests.Session()
     r = s.post(f"{BASE_URL}/api/auth/login", json=creds, timeout=30)
     assert r.status_code == 200, f"login failed {r.status_code}: {r.text}"

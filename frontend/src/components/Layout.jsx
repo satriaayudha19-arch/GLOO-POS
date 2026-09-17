@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingBag, ReceiptText, Store, Tags, Coffee, Layers,
   BadgePercent, CreditCard, Percent, Clock, Users, Settings, LogOut,
-  Wallet, Wifi, WifiOff, ChevronDown, Download,
+  Wallet, Wifi, WifiOff, ChevronDown, Download, BarChart3,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { usePos } from "../context/PosContext";
@@ -16,6 +16,7 @@ const NAV = [
   { type: "item", to: "/", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
   { type: "item", to: "/pos", label: "POS", icon: ShoppingBag, perm: "pos.use", feature: "POS" },
   { type: "item", to: "/orders", label: "Orders", icon: ReceiptText, perm: "orders.view", feature: "ORDERS" },
+  { type: "item", to: "/reports", label: "Reports", icon: BarChart3, perm: "reports.view", feature: "REPORTS" },
   {
     type: "group", label: "Management", items: [
       { to: "/management/outlets", label: "Outlets", icon: Store, perm: "outlets.view" },

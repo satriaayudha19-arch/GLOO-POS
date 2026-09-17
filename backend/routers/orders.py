@@ -207,7 +207,7 @@ async def create_order(body: OrderCreate, ent=Depends(require_feature("ORDERS"))
         "transaction_number": number, "client_transaction_id": body.client_transaction_id,
         "status": "PAID", "items": items_snap,
         "subtotal": subtotal,
-        "discount": {"label": discount_label, "amount": discount_amount} if discount_amount else None,
+        "discount": {"id": body.discount_id, "label": discount_label, "amount": discount_amount} if discount_amount else None,
         "tax": tax_snap, "service_charge": svc_snap,
         "grand_total": grand_total,
         "payment": {"method_id": method["id"], "method_name": method["name"], "method_type": method["type"],

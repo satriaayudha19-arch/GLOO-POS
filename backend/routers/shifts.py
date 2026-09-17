@@ -122,7 +122,9 @@ async def close_shift(shift_id: str, body: CloseShiftBody, user=Depends(get_curr
     expected = shift["opening_cash"] + stats["cash_sales"] + shift.get("cash_in", 0) - shift.get("cash_out", 0)
     res = await db.shifts.find_one_and_update(
         {"id": shift_id, "status": "OPEN"},
-        {"$set": {"status": "CLOSED", "closed_at": datetime.now(timezone.utc), "expected_cash": expected,
+        {"$set": {"status": "CLOSED", "closed_at": datetime.now(timezone.utc),
+                  "closed_by_id": user["id"], "closed_by_name": user["name"], "closed_by_code": user["code"],
+                  "expected_cash": expected,
                   "actual_cash": body.actual_cash, "variance": body.actual_cash - expected,
                   "cash_sales": stats["cash_sales"], "total_sales": stats["total_sales"],
                   "orders_count": stats["orders_count"]},
