@@ -9,7 +9,7 @@ from database import db
 from entitlements import require_feature
 from permissions import has_permission
 from security import assert_outlet_access, get_current_user
-from utils import err, next_seq, pct_of, log_audit
+from utils import err, next_seq, pct_of, log_audit, now_local, now_utc, transaction_seq_key
 from routers.shifts import add_journal
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -193,9 +193,10 @@ async def create_order(body: OrderCreate, ent=Depends(require_feature("ORDERS"))
         amount_paid = grand_total
         change = 0
 
-    now = datetime.now(timezone.utc)
-    seq = await next_seq(f"txnseq:{tid}:{body.outlet_id}:{now:%Y%m%d}")
-    number = txn_number(tenant["code"], outlet["code"], user["code"], seq, now)
+    local_now = now_local()
+    created_at = now_utc()
+    seq = await next_seq(transaction_seq_key(tid, body.outlet_id, local_now))
+    number = txn_number(tenant["code"], outlet["code"], user["code"], seq, local_now)
 
     settings = await db.tenant_settings.find_one({"tenant_id": tid}, PROJ) or {}
     order = {
@@ -212,7 +213,7 @@ async def create_order(body: OrderCreate, ent=Depends(require_feature("ORDERS"))
         "payment": {"method_id": method["id"], "method_name": method["name"], "method_type": method["type"],
                     "amount_paid": amount_paid, "change": change},
         "receipt_footer": settings.get("receipt_footer", ""),
-        "created_at": now, "voided_at": None, "voided_by": None, "void_reason": None,
+        "created_at": created_at, "voided_at": None, "voided_by": None, "void_reason": None,
     }
     try:
         await db.orders.insert_one(order)

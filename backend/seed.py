@@ -1,12 +1,13 @@
 import os
+import secrets
 import uuid
 from datetime import datetime, timezone, timedelta
 
 from database import db
 from security import hash_password
 
-OWNER_PASSWORD = "GlooPOS2026!"
-DEMO_PASSWORD = "GlooDemo2026!"
+OWNER_PASSWORD = os.environ.get("SEED_DEMO_OWNER_PASSWORD") or secrets.token_urlsafe(18)
+DEMO_PASSWORD = os.environ.get("SEED_DEMO_USER_PASSWORD") or secrets.token_urlsafe(18)
 
 
 def now():
@@ -46,11 +47,12 @@ PLANS = [
 async def seed_plans():
     for p in PLANS:
         existing = await db.subscription_plans.find_one({"code": p["code"]})
-        doc = {**p, "updated_at": now()}
         if existing:
-            await db.subscription_plans.update_one({"code": p["code"]}, {"$set": doc})
-        else:
-            await db.subscription_plans.insert_one({**doc, "id": str(uuid.uuid4()), "created_at": now()})
+            continue
+        now_value = now()
+        await db.subscription_plans.insert_one({
+            **p, "id": str(uuid.uuid4()), "created_at": now_value, "updated_at": now_value,
+        })
 
 
 async def seed_platform_admin():
@@ -72,7 +74,7 @@ async def seed_demo_tenant():
         return
     tenant_id = str(uuid.uuid4())
     await db.tenants.insert_one({
-        "id": tenant_id, "code": "T001", "name": "GLOO Demo", "brand_name": "GLOO Coffee",
+        "id": tenant_id, "code": "T001", "source": "seed_demo", "name": "GLOO Demo", "brand_name": "GLOO Coffee",
         "outlets_count": 2, "users_count": 4, "active": True, "created_at": now(),
     })
     period_start = now()
@@ -100,7 +102,7 @@ async def seed_demo_tenant():
         ("U004", "Demo Kitchen", "kitchen@gloo.demo", "KITCHEN", DEMO_PASSWORD, [out_jkt]),
     ]
     await db.users.insert_many([
-        {"id": str(uuid.uuid4()), "code": code, "tenant_id": tenant_id, "name": name, "email": email,
+        {"id": str(uuid.uuid4()), "code": code, "tenant_id": tenant_id, "source": "seed_demo", "name": name, "email": email,
          "password_hash": hash_password(pw), "role": role, "outlet_ids": outlets, "active": True, "created_at": now()}
         for code, name, email, role, pw, outlets in users
     ])
@@ -174,4 +176,5 @@ async def seed_demo_tenant():
 async def seed_all():
     await seed_plans()
     await seed_platform_admin()
-    await seed_demo_tenant()
+    if os.environ.get("SEED_DEMO_TENANT", "false").lower() == "true":
+        await seed_demo_tenant()

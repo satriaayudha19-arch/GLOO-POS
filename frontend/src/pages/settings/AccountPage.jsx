@@ -9,15 +9,17 @@ import PageHeader from "../../components/PageHeader";
 export default function AccountPage() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
-  const [pw, setPw] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const user = session?.user;
 
   const changePassword = async () => {
-    if (!pw) return;
+    if (!currentPassword || !newPassword) return;
     try {
-      await api.patch(`/users/${user.id}`, { password: pw });
+      await api.post("/auth/change-password", { current_password: currentPassword, new_password: newPassword });
       toast.success("Password updated");
-      setPw("");
+      setCurrentPassword("");
+      setNewPassword("");
     } catch (e) { toast.error(apiError(e)); }
   };
 
@@ -39,7 +41,8 @@ export default function AccountPage() {
       </div>
       <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
         <h3 className="font-heading font-semibold">Change Password</h3>
-        <input data-testid="account-password-input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password" className="w-full h-11 px-3 rounded-lg bg-secondary border border-border text-sm focus:border-primary focus:outline-none" />
+        <input data-testid="account-current-password-input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Current password" className="w-full h-11 px-3 rounded-lg bg-secondary border border-border text-sm focus:border-primary focus:outline-none" />
+        <input data-testid="account-new-password-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" className="w-full h-11 px-3 rounded-lg bg-secondary border border-border text-sm focus:border-primary focus:outline-none" />
         <button onClick={changePassword} data-testid="account-password-save" className="w-full h-11 rounded-xl bg-secondary border border-border font-bold text-sm hover:bg-accent">Update Password</button>
       </div>
       <button

@@ -20,7 +20,7 @@ Every protected request passes: Authentication → Tenant Resolution → Subscri
 - `permissions.py` — centralized role → permission map (OWNER/MANAGER/CASHIER/STAFF/KITCHEN/PLATFORM_ADMIN)
 - `entitlements.py` — centralized subscription engine: status lifecycle (TRIALING/ACTIVE/PAST_DUE/GRACE_PERIOD/SUSPENDED/CANCELLED/EXPIRED), `require_feature(code)`, concurrency-safe `enforce_limit` via atomic conditional counter increment
 - `routers/` — auth, subscription, outlets, users, catalog (categories/products/variant-groups/modifier-groups/discounts + POS catalog bundle), operations (payment-methods, tax, service-charge), shifts (+ journal), orders, dashboard, platform, settings
-- `seed.py` — idempotent seed: 4 plans, platform admin, GLOO Demo tenant (T001, PRO), 2 outlets, 4 users, catalog, payment methods, tax 10%, service 5%
+- `seed.py` — idempotent seed: 4 plans and platform admin; optional development demo tenant is controlled by `SEED_DEMO_TENANT=true`
 
 ### Money & transaction integrity
 - Integer minor units everywhere; percentage math via Decimal half-up. Server computes all prices, discounts, tax, service, totals, change — client input is never authoritative.
@@ -34,11 +34,11 @@ Every protected request passes: Authentication → Tenant Resolution → Subscri
 - Full IndexedDB offline transaction sync is scheduled for the next iteration.
 
 ## Environment variables
-- `backend/.env`: `MONGO_URL`, `DB_NAME`, `CORS_ORIGINS`, `JWT_SECRET`, `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`
+- `backend/.env`: `MONGO_URL`, `DB_NAME`, `CORS_ORIGINS`, `JWT_SECRET`, `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`, `SEED_DEMO_TENANT` (default `false`)
 - `frontend/.env`: `REACT_APP_BACKEND_URL`
 
-## Demo credentials
-See `/app/memory/test_credentials.md`. Owner: `satriaayudha19@gmail.com` / `GlooPOS2026!` · Cashier: `cashier@gloo.demo` / `GlooDemo2026!` · Platform: `platform@gloo.pos` / `GlooPlatform2026!`
+## Demo environment
+Demo tenant seeding is disabled by default. For development only, set `SEED_DEMO_TENANT=true` together with `SEED_DEMO_OWNER_PASSWORD` and `SEED_DEMO_USER_PASSWORD`. Do not enable demo seeding in production.
 
 ## Plans (seeded, configurable via Platform → Plans)
 | Feature | FREE | BASIC | PRO | ENTERPRISE |

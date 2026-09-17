@@ -78,6 +78,27 @@ async def login(body: LoginBody, request: Request, response: Response):
     return await build_session_payload(user)
 
 
+class ChangePasswordBody(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def change_password(body: ChangePasswordBody, user=Depends(get_current_user)):
+    stored_user = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if not stored_user or not verify_password(body.current_password, stored_user.get("password_hash", "")):
+        err(401, "INVALID_CURRENT_PASSWORD", "Current password is incorrect")
+    if not body.new_password:
+        err(400, "INVALID_PASSWORD", "New password is required")
+    changed_at = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"password_hash": hash_password(body.new_password), "password_changed_at": changed_at}},
+    )
+    await log_audit(user.get("tenant_id"), None, user, "PASSWORD_SELF_CHANGE", "user", user["id"])
+    return {"ok": True}
+
+
 @router.post("/logout")
 async def logout(response: Response, user=Depends(get_current_user)):
     clear_auth_cookies(response)

@@ -1,11 +1,9 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends
 
 from database import db
 from permissions import has_permission
 from security import assert_outlet_access, get_current_user
-from utils import err
+from utils import err, today_start_utc
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 PROJ = {"_id": 0}
@@ -23,8 +21,7 @@ async def dashboard(outlet_id: str | None = None, user=Depends(get_current_user)
     elif user["role"] not in ("OWNER", "MANAGER"):
         match["outlet_id"] = {"$in": user.get("outlet_ids") or []}
 
-    now = datetime.now(timezone.utc)
-    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_start = today_start_utc()
     today_match = {**match, "created_at": {"$gte": day_start}}
 
     today = (await db.orders.aggregate([
