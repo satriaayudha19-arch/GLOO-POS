@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from database import db, client
+from database import db, client, run_with_database_retry
 from seed import seed_all
 from routers import auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings
 
@@ -45,10 +45,14 @@ async def ensure_indexes():
     await db.login_attempts.create_index("locked_until", expireAfterSeconds=0)
 
 
-@app.on_event("startup")
-async def startup():
+async def initialize_database():
     await ensure_indexes()
     await seed_all()
+
+
+@app.on_event("startup")
+async def startup():
+    await run_with_database_retry(initialize_database, "startup initialization")
     logger.info("GLOO POS backend started; indexes ensured; seed complete")
 
 
