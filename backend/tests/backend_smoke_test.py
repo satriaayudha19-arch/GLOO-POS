@@ -8,7 +8,7 @@ import re
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://gloo-offline-first.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://env-setup-backend.preview.emergentagent.com").rstrip("/")
 
 CASHIER = {"email": "cashier@gloo.demo", "password": "GlooDemo2026!"}
 OWNER = {"email": "satriaayudha19@gmail.com", "password": "GlooPOS2026!"}
