@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { DollarSign, ReceiptText, TrendingUp, Clock, ShoppingBag } from "lucide-react";
+import { DollarSign, ReceiptText, TrendingUp, Clock, ShoppingBag, AlertTriangle } from "lucide-react";
 import api from "../lib/api";
 import { money, fmtTime } from "../lib/format";
 import { usePos } from "../context/PosContext";
+import { useAuth } from "../context/AuthContext";
 import PageHeader from "../components/PageHeader";
 
 function StatCard({ icon: Icon, label, value, sub, testid }) {
@@ -23,12 +24,20 @@ function StatCard({ icon: Icon, label, value, sub, testid }) {
 
 export default function DashboardPage() {
   const { outletId, outlet, shift } = usePos();
+  const { hasFeature, hasPerm } = useAuth();
   const [data, setData] = useState(null);
+  const [lowStock, setLowStock] = useState([]);
 
   useEffect(() => {
     const params = outletId ? { outlet_id: outletId } : {};
     api.get("/dashboard", { params }).then((r) => setData(r.data)).catch(() => setData(null));
   }, [outletId]);
+
+  useEffect(() => {
+    if (hasFeature("INVENTORY") && hasPerm("catalog.manage")) {
+      api.get("/inventory/low-stock").then((r) => setLowStock(r.data)).catch(() => setLowStock([]));
+    }
+  }, [hasFeature, hasPerm]);
 
   return (
     <div data-testid="dashboard-page">
@@ -37,6 +46,23 @@ export default function DashboardPage() {
         subtitle={outlet ? `${outlet.name} · ${new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}` : ""}
         testid="dashboard-header"
       />
+      {lowStock.length > 0 && (
+        <div data-testid="low-stock-alert" className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 text-amber-400 font-heading font-semibold">
+              <AlertTriangle size={18} /> Stok Menipis ({lowStock.length})
+            </div>
+            <Link to="/management/ingredients" className="text-xs text-primary font-semibold hover:underline" data-testid="low-stock-manage">Kelola stok</Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {lowStock.map((i) => (
+              <span key={i.id} data-testid={`low-stock-item-${i.id}`} className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 text-xs font-semibold">
+                {i.name}: <span className="font-mono">{i.stock_qty}</span> {i.unit}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {!data ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : (

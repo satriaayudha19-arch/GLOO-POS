@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ShoppingBag, ReceiptText, Store, Tags, Coffee, Layers,
   BadgePercent, CreditCard, Percent, Clock, Users, Settings, LogOut,
-  Wallet, Wifi, WifiOff, ChevronDown, Download, BarChart3,
+  Wallet, Wifi, WifiOff, ChevronDown, Download, BarChart3, Package, ChefHat,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { usePos } from "../context/PosContext";
@@ -25,6 +25,8 @@ const NAV = [
       { to: "/management/variants", label: "Variants & Modifiers", icon: Layers, perm: "catalog.manage" },
       { to: "/management/prices", label: "Prices", icon: Wallet, perm: "catalog.manage" },
       { to: "/management/discounts", label: "Discounts", icon: BadgePercent, perm: "discounts.manage", feature: "DISCOUNTS" },
+      { to: "/management/ingredients", label: "Ingredients", icon: Package, perm: "catalog.manage", feature: "INVENTORY" },
+      { to: "/management/recipes", label: "Recipes", icon: ChefHat, perm: "catalog.manage", feature: "INVENTORY" },
     ],
   },
   {

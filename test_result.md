@@ -507,16 +507,16 @@
 ##
 ## frontend:
 ##   - task: "Inventory UI (IngredientsPage, RecipesPage, low-stock dashboard widget, nav/routes)"
-##     implemented: false
+##     implemented: true
 ##     working: "NA"
 ##     file: "/app/frontend/src/pages/management/IngredientsPage.jsx, /app/frontend/src/pages/management/RecipesPage.jsx, /app/frontend/src/pages/DashboardPage.jsx, /app/frontend/src/components/Layout.jsx, /app/frontend/src/App.js"
 ##     stuck_count: 0
 ##     priority: "high"
-##     needs_retesting: false
+##     needs_retesting: true
 ##     status_history:
 ##         -working: "NA"
 ##         -agent: "main"
-##         -comment: "Frontend not yet implemented. Will be built after backend is verified and pushed to GitHub."
+##         -comment: "Implemented Fase 2 Inventory FRONTEND. IngredientsPage.jsx: table of ingredients (name/unit/stock/threshold/status), create/edit modal (stock_qty only editable on create; existing edited via Sesuaikan Stok), Adjust Stock modal calling POST /api/ingredients/{id}/adjust (type PURCHASE_IN/WASTE/ADJUSTMENT, signed qty_change, note), MENIPIS badge when stock<=threshold, upgrade notice when INVENTORY feature disabled. RecipesPage.jsx: table of products with recipe status, modal to build base recipe (ingredient rows + qty_per_unit), POST/PATCH/DELETE /api/recipes, upgrade notice when disabled. DashboardPage.jsx: added low-stock alert banner (GET /api/inventory/low-stock, only when hasFeature INVENTORY && hasPerm catalog.manage). Layout.jsx: added Ingredients & Recipes menu items in Management group (perm catalog.manage, feature INVENTORY). App.js: added /management/ingredients and /management/recipes routes (Protected perm=catalog.manage). Lint clean. VERIFIED VIA SCREENSHOT: OWNER sees both menu items, Ingredients table renders with MENIPIS badge and Sesuaikan Stok buttons, Dashboard shows 'Stok Menipis (1)' banner. Needs frontend testing agent for full CRUD + gating + adjust + recipe build flows."
 ##
 ## metadata:
 ##     created_by: "main_agent"

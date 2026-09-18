@@ -16,6 +16,8 @@ import ProductsPage from "@/pages/management/ProductsPage";
 import VariantsPage from "@/pages/management/VariantsPage";
 import PricesPage from "@/pages/management/PricesPage";
 import DiscountsPage from "@/pages/management/DiscountsPage";
+import IngredientsPage from "@/pages/management/IngredientsPage";
+import RecipesPage from "@/pages/management/RecipesPage";
 import PaymentMethodsPage from "@/pages/operations/PaymentMethodsPage";
 import TaxServicePage from "@/pages/operations/TaxServicePage";
 import ShiftsPage from "@/pages/operations/ShiftsPage";
@@ -73,6 +75,8 @@ function TenantApp() {
           <Route path="/management/variants" element={<Protected perm="catalog.manage"><VariantsPage /></Protected>} />
           <Route path="/management/prices" element={<Protected perm="catalog.manage"><PricesPage /></Protected>} />
           <Route path="/management/discounts" element={<Protected perm="catalog.manage"><DiscountsPage /></Protected>} />
+          <Route path="/management/ingredients" element={<Protected perm="catalog.manage"><IngredientsPage /></Protected>} />
+          <Route path="/management/recipes" element={<Protected perm="catalog.manage"><RecipesPage /></Protected>} />
           <Route path="/operations/payment-methods" element={<Protected perm="payments.manage"><PaymentMethodsPage /></Protected>} />
           <Route path="/operations/tax-service" element={<Protected perm="tax.manage"><TaxServicePage /></Protected>} />
           <Route path="/operations/shifts" element={<Protected perm="shifts.use"><ShiftsPage /></Protected>} />
