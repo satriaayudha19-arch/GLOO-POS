@@ -521,14 +521,32 @@
 ##         -agent: "testing"
 ##         -comment: "COMPREHENSIVE FASE 2 INVENTORY FRONTEND TESTING COMPLETE ✅✅✅. ALL REQUIRED SCENARIOS PASSED (19/20 tests, 1 minor timeout). Tested on preview URL https://preview-backend-2.preview.emergentagent.com with credentials from test_credentials.md. SECTION A - PRO OWNER FULL FLOW (satriaayudha19@gmail.com): (A1) Login successful, sidebar shows BOTH 'Ingredients' (nav-ingredients) and 'Recipes' (nav-recipes) menu items ✅. (A2) Created new ingredient 'Susu UHT' with unit ml, stock 2000, threshold 300 via 'Bahan Baru' button (ingredient-create-button), ingredient appears in table ✅. (A3) Stock adjustment WASTE -100: clicked 'Sesuaikan Stok' (ingredient-adjust-{id}), selected type WASTE, entered qty_change -100, submitted (adjust-submit), stock decreased from 734→634 correctly ✅. (A4) Stock adjustment PURCHASE_IN +500: selected type PURCHASE_IN, entered qty_change 500, submitted, stock increased from 634→1134 correctly ✅. (A5) Low-stock 'MENIPIS' badge verified on ingredients page (amber badge appears when stock <= threshold) ✅. (A6) Recipe creation: navigated to /management/recipes, clicked 'Buat Resep' (recipe-edit-{id}), clicked 'Tambah bahan' (recipe-addrow), selected ingredient (recipe-ingredient-0), set qty 50 (recipe-qty-0), submitted (recipe-form-submit), product shows 'N bahan' badge ✅. (A6b) Recipe delete: re-opened recipe modal, clicked delete button (recipe-delete), recipe deleted successfully ✅. (A7) Dashboard low-stock alert: navigated to /, verified 'Stok Menipis (1)' alert banner (low-stock-alert) with 'Kelola stok' link (low-stock-manage) displayed correctly ✅. SECTION B - ROLE GATING CASHIER (cashier@gloo.demo): (B8) Login successful, sidebar does NOT show Ingredients or Recipes menu items (correctly hidden) ✅. (B9) Direct URL access to /management/ingredients redirected to / (dashboard) ✅. (B9b) Direct URL access to /management/recipes redirected to / (dashboard) ✅. SECTION C - ROLE GATING KITCHEN (kitchen@gloo.demo): (C10) Login successful (dashboard page timeout but subsequent tests passed), sidebar does NOT show Ingredients or Recipes menu items ⚠️. (C10b) Direct URL access to /management/ingredients redirected to / ✅. (C10c) Direct URL access to /management/recipes redirected to / ✅. SECTION D - PACKAGE GATING FREE OWNER (freeowner@gloofree.com): (D11) Login successful, sidebar does NOT show Ingredients or Recipes (feature-gated correctly) ✅. (D12) Direct URL access to /management/ingredients shows UPGRADE MESSAGE (ingredients-upgrade) with text 'Fitur Inventory belum aktif' (NOT error/blank/redirect) ✅. (D12b) Direct URL access to /management/recipes shows UPGRADE MESSAGE (recipes-upgrade) with text 'Fitur Inventory belum aktif' (NOT error/blank/redirect) ✅. CONSOLE ANALYSIS: 401 errors on /api/auth/me during logout/login transitions (expected), CDN rum failures (analytics, not affecting functionality), React hydration warning about <span> inside <option> in RecipesPage (minor, not blocking). NO CODE CHANGES MADE. All Fase 2 Inventory frontend requirements FULLY FUNCTIONAL."
 ##
+## user_problem_statement: Rotasi password default akun platform admin (platform@gloo.pos) yang masih memakai "GlooPlatform2026!" bocor lama, lalu re-run test_platform_tenants dan test_platform_plans.
+## backend:
+##   - task: "Platform admin password rotation"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/ (users collection, platform@gloo.pos)"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Diverifikasi via bcrypt.checkpw bahwa password_hash user platform@gloo.pos (role PLATFORM_ADMIN, id 1dd569af-2580-4acc-8ae8-fb7ca8cf6ba4) masih match dengan default 'GlooPlatform2026!'. Password lalu dirotasi ke random 32-char (secrets.token) melalui update_one($set password_hash + must_change_password=false). Verifikasi ulang bcrypt.checkpw dengan password baru = True; login via POST /api/auth/login menggunakan password baru returns 200 dengan role PLATFORM_ADMIN. Pytest test_platform_tenants dan test_platform_plans re-run: 2 passed. Full suite 23 passed."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "PLATFORM ADMIN PASSWORD ROTATION VERIFICATION COMPLETE ✅✅✅. All 5 required test steps passed successfully via HTTPS requests to https://7597ee0b-32d7-4884-af9c-d744676c7109.preview.emergentagent.com. (1) OLD PASSWORD REJECTED: POST /api/auth/login with platform@gloo.pos / GlooPlatform2026! returned HTTP 401 with error 'Invalid email or password' ✅ - rotation successful, old password no longer works. (2) NEW PASSWORD ACCEPTED: POST /api/auth/login with platform@gloo.pos / eWAOTuF-mD_YCSNNQZWuvwm-sAjZP__V returned HTTP 200 with correct user data: role='PLATFORM_ADMIN', permissions=['platform.admin'], id='1dd569af-2580-4acc-8ae8-fb7ca8cf6ba4', code='P001', name='Platform Admin' ✅. (3) PLATFORM TENANTS ACCESS: GET /api/platform/tenants with platform admin session returned HTTP 200 with tenant list (1 tenant: GLOO Demo T001 with PRO subscription) ✅. (4) PLATFORM PLANS ACCESS: GET /api/platform/plans with platform admin session returned HTTP 200 with complete subscription plans list (4 plans: FREE/BASIC/PRO/ENTERPRISE with correct pricing and features) ✅. (5) RBAC ENFORCEMENT: Cashier login with cashier@gloo.demo / 3OOkH4gJXpOuw_MuvxpLmSoo4Dr-qdLs successful (HTTP 200, role='CASHIER'), but GET /api/platform/tenants with cashier session returned HTTP 403 with error 'Insufficient role permission' (NOT 401, NOT 200) ✅ - RBAC correctly prevents non-platform-admin access. NO CODE CHANGES MADE. NO SERVICE RESTARTS PERFORMED. Password rotation is FULLY FUNCTIONAL and secure."
+
 ## metadata:
 ##     created_by: "main_agent"
 ##     version: "1.0"
-##     test_sequence: 9
-##     run_ui: true
+##     test_sequence: 10
+##     run_ui: false
 ##
 ## test_plan:
-##     current_focus: []
+##     current_focus:
+##         - "Platform admin password rotation"
 ##     stuck_tasks: []
 ##     test_all: false
 ##     test_priority: "high_first"
