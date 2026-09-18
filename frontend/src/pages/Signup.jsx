@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Coffee, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -30,8 +30,12 @@ export default function Signup() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Ref to prevent the "already-logged-in" effect from firing right AFTER a successful signup
+  // (submit sets session -> effect would fire and race the manual navigate to subscription page).
+  const submittingRef = useRef(false);
 
   useEffect(() => {
+    if (submittingRef.current) return;
     if (session && session.user) {
       navigate(session.user.role === "PLATFORM_ADMIN" ? "/platform" : "/", { replace: true });
     }
@@ -49,6 +53,7 @@ export default function Signup() {
       return;
     }
     setBusy(true);
+    submittingRef.current = true;
     try {
       const data = await signup({
         business_name: businessName.trim(),
@@ -67,6 +72,7 @@ export default function Signup() {
         navigate("/", { replace: true });
       }
     } catch (err) {
+      submittingRef.current = false;
       setError(apiError(err));
     } finally {
       setBusy(false);
