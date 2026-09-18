@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+import logging
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -14,6 +15,7 @@ from routers.shifts import add_journal
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 PROJ = {"_id": 0}
+logger = logging.getLogger(__name__)
 
 
 class OrderItemIn(BaseModel):
@@ -116,7 +118,7 @@ async def create_order(body: OrderCreate, ent=Depends(require_feature("ORDERS"))
         subtotal += line_total
         items_snap.append({
             "product_id": product["id"], "name": product["name"],
-            "variants": variant_labels, "modifiers": mods,
+            "variants": variant_labels, "variant_option_ids": line.variant_option_ids, "modifiers": mods,
             "qty": line.qty, "unit_price": unit, "line_total": line_total, "notes": line.notes,
         })
 
@@ -225,6 +227,12 @@ async def create_order(body: OrderCreate, ent=Depends(require_feature("ORDERS"))
     order.pop("_id", None)
     await add_journal(tid, body.outlet_id, user, "SALE", order["id"],
                       {"transaction_number": number, "grand_total": grand_total, "method": method["name"]})
+    # Inventory deduction is best-effort: an order/payment must NEVER fail because of stock.
+    try:
+        from routers.inventory import deduct_stock_for_order
+        await deduct_stock_for_order(order)
+    except Exception:
+        logger.exception("Stock deduction failed for order %s; order remains valid", order["id"])
     return order
 
 

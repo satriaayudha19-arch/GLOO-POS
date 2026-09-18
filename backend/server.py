@@ -6,14 +6,14 @@ from starlette.middleware.cors import CORSMiddleware
 
 from database import db, client, run_with_database_retry
 from seed import seed_all
-from routers import auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports
+from routers import auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports, inventory
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GLOO POS API")
 
-for r in (auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports):
+for r in (auth, subscription, outlets, users, catalog, operations, shifts, orders, dashboard, platform, settings, reports, inventory):
     app.include_router(r.router)
 
 
@@ -41,6 +41,10 @@ async def ensure_indexes():
     await db.shifts.create_index([("tenant_id", 1), ("outlet_id", 1), ("opened_at", -1)])
     await db.journal.create_index([("tenant_id", 1), ("outlet_id", 1), ("created_at", -1)])
     await db.audit_logs.create_index([("tenant_id", 1), ("created_at", -1)])
+    await db.ingredients.create_index([("tenant_id", 1), ("name", 1)])
+    await db.recipes.create_index([("tenant_id", 1), ("variant_key", 1)], unique=True)
+    await db.recipes.create_index([("tenant_id", 1), ("product_id", 1)])
+    await db.stock_movements.create_index([("tenant_id", 1), ("ingredient_id", 1), ("created_at", -1)])
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("locked_until", expireAfterSeconds=0)
 

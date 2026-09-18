@@ -485,3 +485,54 @@
 
 ##     -agent: "user"
 ##     -message: "User memilih opsi b: diskon manual tetap hanya untuk OWNER/MANAGER. Tidak ada perubahan permission CASHIER dan validasi OWNER dianggap cukup. Key warning serta filter/export lanjutan tetap ditunda."
+
+
+
+## user_problem_statement: Fase 2 - Modul Inventory (bahan baku, resep/BOM, potong stok otomatis saat order, alert stok menipis)
+## backend:
+##   - task: "Inventory API (ingredients, recipes, stock movements, low-stock, order deduction)"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/routers/inventory.py, /app/backend/routers/orders.py, /app/backend/server.py, /app/backend/tests/inventory_smoke_test.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Implemented Fase 2 Inventory backend. New router /api/inventory: GET/POST /api/ingredients, PATCH /api/ingredients/{id}, POST /api/ingredients/{id}/adjust (records stock_movements), GET /api/ingredients/{id}/movements, GET/POST /api/recipes, PATCH/DELETE /api/recipes/{id}, GET /api/inventory/low-stock. New collections ingredients, recipes (variant_key unique per product+variant), stock_movements. Indexes added in server.py. All inventory endpoints gated by require_feature('INVENTORY') AND permission catalog.manage (cashier blocked). Order integration: orders.create_order now appends variant_option_ids to item snapshot and calls deduct_stock_for_order() AFTER order insert+journal, wrapped in try/except so an order/payment NEVER fails due to stock. Deduction uses find_one_and_update($inc) per ingredient (atomic, race-safe) and records SALE_OUT movements. Recipe matching: base recipe (variant_option_id null) always applies; variant-specific recipes apply when their variant_option_id is in the line's variant_option_ids. Void does NOT auto-restore stock (manual decision). MANUAL VERIFICATION DONE via curl on localhost: single order qty2 deducted 36 (950->914), 10 parallel orders qty1 deducted exactly 180 (914->734, CONCURRENCY OK), movements recorded, cashier GET /ingredients -> 403, adjust WASTE recorded, low-stock endpoint works. Tenant demo T001 on PRO plan (INVENTORY enabled). Please retest comprehensively: (a) order succeeds even without recipe/stock, (b) atomic deduction under concurrency, (c) tenant isolation, (d) feature+permission gating, (e) adjust records movement, (f) recipe CRUD + variant_key uniqueness (409 on duplicate)."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "COMPREHENSIVE FASE 2 INVENTORY BACKEND TESTING COMPLETE ✅✅✅. ALL REQUIRED SCENARIOS PASSED. Created comprehensive test suite (backend_test_inventory_fase2.py) covering all 8 required scenarios plus low-stock endpoint. TEST RESULTS: (a) FEATURE+PERMISSION GATING ✅: CASHIER blocked with 403 on all inventory endpoints (GET/POST /api/ingredients, GET/POST /api/recipes, GET /api/inventory/low-stock). OWNER (role *) and MANAGER (catalog.manage) have full access (200 OK). (b) INGREDIENT CRUD ✅: Created ingredient with all fields (name, unit, stock_qty, low_stock_threshold, active). Listed ingredients successfully. PATCH updates name/unit/low_stock_threshold/active correctly. Verified stock_qty CANNOT be changed via PATCH (only via /adjust). (c) ADJUST RECORDS MOVEMENT ✅: POST /adjust with WASTE -50 reduced stock from 1000→950 and recorded WASTE stock_movement. PURCHASE_IN +200 increased stock correctly. ADJUSTMENT type accepted. qty_change=0 rejected with 400. Invalid type rejected with 400. All movements recorded in stock_movements collection with correct type, qty_change, note, reference_type, actor_id. (d) RECIPE CRUD + UNIQUENESS ✅: Created base recipe (variant_option_id=null) for French Fries product. Duplicate recipe for same product+variant rejected with 409 CONFLICT. PATCH updated ingredients (qty_per_unit changed from 15→20). DELETE removed recipe successfully. Invalid product_id rejected with 400. Invalid ingredient_id rejected with 400. (e) ORDER DEDUCTION (MOST IMPORTANT) ✅: Created recipe with qty_per_unit=25 on French Fries (no required variants). Created order with qty=2. Stock decreased by exactly 50 (25*2) from 5000→4950. SALE_OUT stock_movement recorded with qty_change=-50, reference_type=order, reference_id=order_id, note=transaction_number. Movement correctly references the order. (f) ORDER SUCCEEDS WITHOUT RECIPE ✅: Deleted all recipes for product. Created order successfully with status=PAID (200 OK). Order NEVER fails due to missing recipe/stock (best-effort deduction). (g) CONCURRENCY/ATOMICITY ✅: Created ingredient with stock=1000, recipe qty_per_unit=10. Fired 10 orders in parallel (qty=1 each). All 10 orders returned 200 OK. Final stock=900 (exactly 1000-100). NO RACE CONDITION detected. Atomic $inc operations working correctly. (h) TENANT ISOLATION ✅: Random ingredient UUID returns 404 on /movements. Ingredients/recipes filtered by server-side tenant_id. Listed 6 ingredients and 2 recipes (tenant-filtered). ADDITIONAL: LOW-STOCK ENDPOINT ✅: Created ingredient with stock=10, threshold=50. GET /api/inventory/low-stock returned 1 item including our low-stock ingredient. EXISTING PYTEST SUITES: backend_smoke_test.py: 13 passed in 6.15s ✅. reports_smoke_test.py: 5 passed in 3.31s ✅. inventory_smoke_test.py: 5 passed in 7.32s ✅. Total: 23 tests passed, 0 failed. Backend logs clean (no errors). Backend supervisor: RUNNING. All Fase 2 Inventory backend requirements FULLY FUNCTIONAL and production-ready."
+##
+## frontend:
+##   - task: "Inventory UI (IngredientsPage, RecipesPage, low-stock dashboard widget, nav/routes)"
+##     implemented: false
+##     working: "NA"
+##     file: "/app/frontend/src/pages/management/IngredientsPage.jsx, /app/frontend/src/pages/management/RecipesPage.jsx, /app/frontend/src/pages/DashboardPage.jsx, /app/frontend/src/components/Layout.jsx, /app/frontend/src/App.js"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Frontend not yet implemented. Will be built after backend is verified and pushed to GitHub."
+##
+## metadata:
+##     created_by: "main_agent"
+##     version: "1.0"
+##     test_sequence: 8
+##     run_ui: false
+##
+## test_plan:
+##     current_focus:
+##         - "Inventory API (ingredients, recipes, stock movements, low-stock, order deduction)"
+##     stuck_tasks: []
+##     test_all: false
+##     test_priority: "high_first"
+##
+## agent_communication:
+##     -agent: "main"
+##     -message: "Fase 2 Inventory BACKEND implemented and manually verified via curl (including concurrency: 10 parallel orders deducted stock exactly with no race condition). Credentials in /app/memory/test_credentials.md (LOCAL DEV DB, OWNER/MANAGER/CASHIER/PLATFORM all password GlooDev2026!, tenant T001 PRO plan with INVENTORY enabled). Please run comprehensive backend testing of the Inventory API and order-integration per the retest checklist. Do NOT test frontend (not built yet)."
+##     -agent: "testing"
+##     -message: "FASE 2 INVENTORY BACKEND COMPREHENSIVE TESTING COMPLETE ✅✅✅. ALL REQUIRED SCENARIOS PASSED WITH NO ISSUES. Created comprehensive test suite covering all 8 required scenarios (a-h) plus low-stock endpoint. SUMMARY: (a) Feature+permission gating: CASHIER blocked (403) on all inventory endpoints, OWNER/MANAGER have access ✅. (b) Ingredient CRUD: create/list/patch working, stock_qty NOT editable via PATCH ✅. (c) Adjust records movement: WASTE/PURCHASE_IN/ADJUSTMENT types work, movements recorded, qty_change=0 rejected (400), invalid type rejected (400) ✅. (d) Recipe CRUD+uniqueness: create/list/patch/delete working, duplicate recipe rejected (409), invalid product_id/ingredient_id rejected (400) ✅. (e) Order deduction (MOST IMPORTANT): recipe created, order placed, stock decreased by qty_per_unit*order.qty exactly, SALE_OUT movement recorded with order reference ✅. (f) Order succeeds without recipe: deleted recipes, order still returns 200 PAID (best-effort) ✅. (g) Concurrency/atomicity: 10 parallel orders, final stock=start-100 exactly, NO race condition ✅. (h) Tenant isolation: random UUID returns 404, queries filtered by tenant_id ✅. Low-stock endpoint: returns ingredients where stock_qty<=low_stock_threshold ✅. PYTEST SUITES: backend_smoke_test.py (13 passed), reports_smoke_test.py (5 passed), inventory_smoke_test.py (5 passed). Total: 23 tests passed, 0 failed. Backend logs clean. All Fase 2 Inventory backend requirements FULLY FUNCTIONAL and production-ready. NO CODE CHANGES MADE."
