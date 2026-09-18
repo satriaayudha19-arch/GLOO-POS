@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from database import db
 from permissions import permissions_for
@@ -12,6 +12,7 @@ from security import (
     clear_auth_cookies, get_jwt_secret,
 )
 import jwt
+from tenant_provisioning import provision_tenant
 from utils import err, log_audit
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -47,6 +48,107 @@ async def build_session_payload(user: dict) -> dict:
         else:
             q = {"tenant_id": tenant["id"], "active": True, "id": {"$in": user.get("outlet_ids") or []}}
         payload["outlets"] = await db.outlets.find(q, {"_id": 0, "id": 1, "code": 1, "name": 1, "address": 1}).to_list(100)
+    return payload
+
+
+class SignupBody(BaseModel):
+    business_name: str = Field(min_length=2, max_length=120)
+    brand_name: str = ""
+    owner_name: str = Field(min_length=2, max_length=120)
+    owner_email: EmailStr
+    owner_password: str = Field(min_length=8, max_length=200)
+    plan_code: str = "FREE"
+
+
+SIGNUP_RATE_LIMIT = 5           # max attempts
+SIGNUP_RATE_WINDOW_MIN = 60     # per hour
+
+
+@router.post("/signup")
+async def signup(body: SignupBody, request: Request, response: Response):
+    # 1) Rate limit per IP (5/hour). Collection has TTL index on expires_at.
+    ip = request.client.host if request.client else "unknown"
+    now = datetime.now(timezone.utc)
+    attempt = await db.signup_attempts.find_one({"_id": ip})
+
+    def _to_aware(dt):
+        if dt is None:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    if attempt and attempt.get("count", 0) >= SIGNUP_RATE_LIMIT:
+        window_start = _to_aware(attempt.get("window_start"))
+        if window_start and (now - window_start) < timedelta(minutes=SIGNUP_RATE_WINDOW_MIN):
+            err(429, "TOO_MANY_SIGNUPS", "Too many signup attempts from this IP. Try again in an hour.")
+
+    # 2) Force plan_code = FREE at signup regardless of client input.
+    # Non-FREE selection is only a marketing hint to be honored later via billing / manual activation.
+    plan_code = "FREE"
+
+    # 3) trial_days: env-driven, default 14
+    try:
+        trial_days = int(os.environ.get("DEFAULT_TRIAL_DAYS", "14"))
+    except ValueError:
+        trial_days = 14
+    if trial_days < 0:
+        trial_days = 0
+
+    # 4) Provision tenant via shared function (may raise err on email/plan issues)
+    try:
+        result = await provision_tenant(
+            name=body.business_name.strip(),
+            brand_name=(body.brand_name or "").strip(),
+            owner_name=body.owner_name.strip(),
+            owner_email=body.owner_email,
+            owner_password=body.owner_password,
+            plan_code=plan_code,
+            trial_days=trial_days,
+            changed_by=body.owner_email.lower(),
+            source="SELF_SIGNUP",
+            reason="Self-service signup",
+        )
+    except Exception:
+        # count failed attempt; increment window
+        expires = now + timedelta(minutes=SIGNUP_RATE_WINDOW_MIN)
+        aw_start = _to_aware(attempt.get("window_start")) if attempt else None
+        if aw_start and (now - aw_start) < timedelta(minutes=SIGNUP_RATE_WINDOW_MIN):
+            await db.signup_attempts.update_one(
+                {"_id": ip},
+                {"$inc": {"count": 1}, "$set": {"last_at": now, "expires_at": expires}},
+            )
+        else:
+            await db.signup_attempts.update_one(
+                {"_id": ip},
+                {"$set": {"count": 1, "window_start": now, "last_at": now, "expires_at": expires}},
+                upsert=True,
+            )
+        raise
+
+    # 5) Count success too (still rate-limit success to prevent tenant spam)
+    expires = now + timedelta(minutes=SIGNUP_RATE_WINDOW_MIN)
+    aw_start = _to_aware(attempt.get("window_start")) if attempt else None
+    if aw_start and (now - aw_start) < timedelta(minutes=SIGNUP_RATE_WINDOW_MIN):
+        await db.signup_attempts.update_one(
+            {"_id": ip},
+            {"$inc": {"count": 1}, "$set": {"last_at": now, "expires_at": expires}},
+        )
+    else:
+        await db.signup_attempts.update_one(
+            {"_id": ip},
+            {"$set": {"count": 1, "window_start": now, "last_at": now, "expires_at": expires}},
+            upsert=True,
+        )
+
+    # 6) Auto-login: set cookies and return session payload
+    user = await db.users.find_one({"id": result["user_id"]})
+    set_auth_cookies(response, user["id"], user["email"])
+    user.pop("password_hash", None)
+    user.pop("_id", None)
+    await log_audit(user.get("tenant_id"), None, user, "SIGNUP", "tenant", result["tenant"]["id"])
+    payload = await build_session_payload(user)
+    # Frontend needs to know the ORIGINAL plan_code requested (from marketing landing).
+    payload["requested_plan_code"] = (body.plan_code or "FREE").upper()
+    payload["provisioned_plan_code"] = plan_code
     return payload
 
 

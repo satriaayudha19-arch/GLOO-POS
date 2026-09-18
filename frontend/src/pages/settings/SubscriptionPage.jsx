@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, X, Infinity as InfinityIcon } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Check, X, Infinity as InfinityIcon, Sparkles } from "lucide-react";
 import api, { apiError } from "../../lib/api";
 import { money, fmtDate } from "../../lib/format";
 import PageHeader from "../../components/PageHeader";
@@ -40,10 +41,20 @@ function UsageBar({ label, used, limit, testid }) {
 export default function SubscriptionPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [params, setParams] = useSearchParams();
+  const pendingActivation = params.get("pending_activation") === "1";
+  const requestedPlan = (params.get("requested") || "").toUpperCase();
 
   useEffect(() => {
     api.get("/subscription").then((r) => setData(r.data)).catch((e) => setError(apiError(e)));
   }, []);
+
+  const dismissBanner = () => {
+    const next = new URLSearchParams(params);
+    next.delete("pending_activation");
+    next.delete("requested");
+    setParams(next, { replace: true });
+  };
 
   if (error) return <p className="text-sm text-red-400" data-testid="subscription-error">{error}</p>;
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -54,6 +65,43 @@ export default function SubscriptionPage() {
   return (
     <div data-testid="subscription-page">
       <PageHeader title="Subscription" subtitle="Your plan, entitlements and usage — managed by the GLOO platform" testid="subscription-header" />
+
+      {pendingActivation && requestedPlan && requestedPlan !== "FREE" && (
+        <div
+          data-testid="pending-activation-banner"
+          className="mb-4 rounded-2xl border border-primary/40 bg-primary/10 px-5 py-4 flex items-start gap-3"
+        >
+          <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+            <Sparkles size={18} className="text-primary" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="font-heading font-bold text-sm">
+              Kamu memilih paket <span className="text-primary">{requestedPlan}</span>
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Fitur pembayaran online sedang disiapkan. Sementara ini akunmu aktif di paket
+              <span className="font-semibold text-foreground"> Free (Trial 14 hari)</span>.
+              Silakan hubungi kami di{" "}
+              <a href="mailto:hello@gloopos.id" className="underline hover:text-foreground">
+                hello@gloopos.id
+              </a>{" "}
+              atau WhatsApp{" "}
+              <a href="https://wa.me/6281234567890" className="underline hover:text-foreground" target="_blank" rel="noreferrer">
+                +62 812-3456-7890
+              </a>{" "}
+              untuk aktivasi manual paket {requestedPlan}.
+            </p>
+          </div>
+          <button
+            onClick={dismissBanner}
+            data-testid="pending-activation-dismiss"
+            className="w-8 h-8 rounded-lg bg-secondary hover:bg-accent flex items-center justify-center shrink-0"
+            aria-label="Tutup"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-card border border-border rounded-2xl p-6 space-y-4">

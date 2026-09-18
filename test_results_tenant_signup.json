@@ -1,0 +1,59 @@
+{
+  "task1": {
+    "R1": {
+      "status": "PASS",
+      "tenant_id": "e70ec4cb-d3d3-495a-8292-1e7f921b8f07",
+      "tenant_code": "T004",
+      "owner_email": "regresi-1789699404@example.com"
+    },
+    "R2": {
+      "status": "PASS"
+    },
+    "R3": {
+      "status": "PASS"
+    },
+    "R4": {
+      "status": "PASS"
+    },
+    "R5": {
+      "status": "PASS",
+      "output": "ests/reports_smoke_test.py::test_reports_outlet_is_server_authorized \ntests/reports_smoke_test.py::test_payments_and_shift_breakdowns_keep_methods_separate \n[gw0] [ 95%] PASSED tests/reports_smoke_test.py::test_payments_and_shift_breakdowns_keep_methods_separate \ntests/reports_smoke_test.py::test_sales_rows_have_expected_fields \n[gw0] [100%] PASSED tests/reports_smoke_test.py::test_sales_rows_have_expected_fields \n\n======================== 23 passed in 66.99s (0:01:06) =========================\n"
+    }
+  },
+  "task2": {
+    "S1": {
+      "status": "PASS",
+      "cookies": "<RequestsCookieJar[<Cookie access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMzU0YTZiMy1lOWE1LTQxMWEtOGRlOS00OWEyNGUxMDA1MzIiLCJlbWFpbCI6InNpZ251cC0xNzg5Njk5NDgyQGV4YW1wbGUuY29tIiwiZXhwIjoxNzg5NzAzMDg1LCJ0eXBlIjoiYWNjZXNzIn0.klYSdOyW1RBHCMUoqGhzkjfjf2SsXPymzMay5bPOYU8 for 7597ee0b-32d7-4884-af9c-d744676c7109.preview.emergentagent.com/>, <Cookie refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMzU0YTZiMy1lOWE1LTQxMWEtOGRlOS00OWEyNGUxMDA1MzIiLCJleHAiOjE3OTAzMDQyODUsInR5cGUiOiJyZWZyZXNoIn0.R0ewQd3Gw3YpRbGMl1huMHrvOcm6jjoMsfuR-TyoeS0 for 7597ee0b-32d7-4884-af9c-d744676c7109.preview.emergentagent.com/>, <Cookie __cf_bm=mZjY_KJ6nHm8NPC4Ah5kH7Cy.tlcIiB73G27O9UN44c-1789699482.6136112-1.0.1.1-mUAxUQSFABc.DlD_Zq.HkplK3QJTg5dHfxdYyG80L1xAE_ecHFAzrcMukvBVT9DRZZT07LdKS_tyESJ_tq6leTBsW4jrX9m1IZdRth7hndURicecjabyWE8Wt79_eths for .preview.emergentagent.com/>]>",
+      "user_email": "signup-1789699482@example.com",
+      "tenant_id": "898a8de8-bab7-4a24-a4f4-faaac14c7ff6"
+    },
+    "S2": {
+      "status": "PASS"
+    },
+    "S3": {
+      "status": "PASS"
+    },
+    "S4": {
+      "status": "PASS"
+    },
+    "S5": {
+      "status": "PASS"
+    },
+    "S6": {
+      "status": "PASS"
+    },
+    "S7": {
+      "status": "PASS"
+    },
+    "S8": {
+      "status": "PASS"
+    },
+    "S9": {
+      "status": "PASS"
+    },
+    "S10": {
+      "status": "PASS",
+      "success_count": 3
+    }
+  }
+}

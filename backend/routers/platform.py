@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr
 
 from database import db
 from security import require_permission, hash_password
+from tenant_provisioning import provision_tenant
 from utils import err, next_seq, log_audit
 
 router = APIRouter(prefix="/api/platform", tags=["platform"])
@@ -48,44 +49,20 @@ class TenantCreate(BaseModel):
 
 @router.post("/tenants")
 async def create_tenant(body: TenantCreate, user=Depends(platform_admin)):
-    email = body.owner_email.lower()
-    if await db.users.find_one({"email": email}):
-        err(409, "EMAIL_EXISTS", "Owner email already registered")
-    plan = await db.subscription_plans.find_one({"code": body.plan_code, "active": True}, PROJ)
-    if not plan:
-        err(400, "PLAN_NOT_FOUND", "Plan not found or inactive")
-    tenant_id = str(uuid.uuid4())
-    tseq = await next_seq("tenant_code")
-    useq = await next_seq(f"user_code:{tenant_id}")
-    now = datetime.now(timezone.utc)
-    trial = body.trial_days > 0
-    await db.tenants.insert_one({
-        "id": tenant_id, "code": f"T{tseq:03d}", "name": body.name,
-        "brand_name": body.brand_name or body.name, "outlets_count": 0, "users_count": 1,
-        "active": True, "created_at": now,
-    })
-    await db.users.insert_one({
-        "id": str(uuid.uuid4()), "code": f"U{useq:03d}", "tenant_id": tenant_id, "name": body.owner_name,
-        "email": email, "password_hash": hash_password(body.owner_password), "role": "OWNER",
-        "outlet_ids": [], "active": True, "created_at": now,
-    })
-    sub = {
-        "id": str(uuid.uuid4()), "tenant_id": tenant_id, "plan_code": plan["code"],
-        "status": "TRIALING" if trial else "ACTIVE",
-        "started_at": now, "current_period_start": now,
-        "current_period_end": now + timedelta(days=30),
-        "trial_started_at": now if trial else None,
-        "trial_ends_at": now + timedelta(days=body.trial_days) if trial else None,
-        "cancelled_at": None, "suspended_at": None, "expired_at": None,
-        "created_at": now, "updated_at": now,
-    }
-    await db.subscriptions.insert_one(sub)
-    await db.subscription_history.insert_one({
-        "id": str(uuid.uuid4()), "tenant_id": tenant_id, "subscription_id": sub["id"],
-        "old_plan_code": None, "new_plan_code": plan["code"], "old_status": None, "new_status": sub["status"],
-        "changed_by": user["email"], "reason": "Tenant created", "source": "PLATFORM_ADMIN", "created_at": now,
-    })
-    tenant = await db.tenants.find_one({"id": tenant_id}, PROJ)
+    result = await provision_tenant(
+        name=body.name,
+        brand_name=body.brand_name,
+        owner_name=body.owner_name,
+        owner_email=body.owner_email,
+        owner_password=body.owner_password,
+        plan_code=body.plan_code,
+        trial_days=body.trial_days,
+        changed_by=user["email"],
+        source="PLATFORM_ADMIN",
+        reason="Tenant created",
+    )
+    tenant = result["tenant"]
+    sub = result["subscription"]
     return {**tenant, "subscription": {"plan_code": sub["plan_code"], "status": sub["status"]}}
 
 

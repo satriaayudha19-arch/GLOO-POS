@@ -25,6 +25,12 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const signup = useCallback(async (body) => {
+    const { data } = await api.post("/auth/signup", body);
+    setSession(data);
+    return data;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.post("/auth/logout");
@@ -51,7 +57,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ session, login, logout, refresh, hasPerm, hasFeature }}>
+    <AuthContext.Provider value={{ session, login, signup, logout, refresh, hasPerm, hasFeature }}>
       {children}
     </AuthContext.Provider>
   );

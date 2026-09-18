@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Coffee } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { apiError } from "../lib/api";
@@ -103,6 +103,12 @@ export default function Login() {
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          <div className="text-center text-sm text-muted-foreground">
+            Belum punya akun?{" "}
+            <Link to="/signup" data-testid="login-to-signup" className="text-primary font-semibold hover:underline">
+              Daftar di sini
+            </Link>
+          </div>
           <p className="text-[11px] text-muted-foreground text-center">
             Demo: cashier@gloo.demo · owner: satriaayudha19@gmail.com
           </p>

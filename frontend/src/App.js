@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Layout from "@/components/Layout";
 import PlatformLayout from "@/components/PlatformLayout";
 import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import DashboardPage from "@/pages/DashboardPage";
 import POSPage from "@/pages/POSPage";
 import OrdersPage from "@/pages/OrdersPage";
@@ -100,6 +101,7 @@ export default function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route
               path="/platform/*"
               element={

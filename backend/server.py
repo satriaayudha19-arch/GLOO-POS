@@ -47,6 +47,7 @@ async def ensure_indexes():
     await db.stock_movements.create_index([("tenant_id", 1), ("ingredient_id", 1), ("created_at", -1)])
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("locked_until", expireAfterSeconds=0)
+    await db.signup_attempts.create_index("expires_at", expireAfterSeconds=0)
 
 
 async def initialize_database():
