@@ -16,7 +16,7 @@ import uuid
 from datetime import date, timedelta
 import requests
 
-BASE_URL = "https://kasir-dev.preview.emergentagent.com"
+BASE_URL = "https://preview-backend-2.preview.emergentagent.com"
 OWNER = {"email": "satriaayudha19@gmail.com", "password": "3keUZaGGuB7R0gyWT6s7HzuRJfPw44o0"}
 CASHIER = {"email": "cashier@gloo.demo", "password": "3OOkH4gJXpOuw_MuvxpLmSoo4Dr-qdLs"}
 

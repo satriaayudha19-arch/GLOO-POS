@@ -8,7 +8,7 @@ import re
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://kasir-dev.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://preview-backend-2.preview.emergentagent.com").rstrip("/")
 
 CASHIER = {"email": os.environ.get("TEST_CASHIER_EMAIL", "cashier@gloo.demo"), "password": os.environ.get("TEST_CASHIER_PASSWORD")}
 OWNER = {"email": os.environ.get("TEST_OWNER_EMAIL", "satriaayudha19@gmail.com"), "password": os.environ.get("TEST_OWNER_PASSWORD")}
