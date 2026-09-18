@@ -541,15 +541,57 @@
 ## metadata:
 ##     created_by: "main_agent"
 ##     version: "1.0"
-##     test_sequence: 10
-##     run_ui: false
+##     test_sequence: 11
+##     run_ui: true
 ##
 ## test_plan:
 ##     current_focus:
-##         - "Platform admin password rotation"
+##         - "Stock movements endpoint enriched with actor_name"
+##         - "Ingredients stock history modal"
 ##     stuck_tasks: []
 ##     test_all: false
 ##     test_priority: "high_first"
+##
+## backend:
+##   - task: "Manager & Kitchen default password check"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/ (users collection)"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: true
+##         -agent: "main"
+##         -comment: "Verifikasi bcrypt.checkpw langsung ke DB Atlas: manager@gloo.demo (MANAGER, id d235b18d-c460-4a92-926d-ba8f251e9397) IS_DEFAULT('GlooDemo2026!')=False; kitchen@gloo.demo (KITCHEN, id 62c55be1-c48a-46bf-9604-9df6bdc47292) IS_DEFAULT=False. Keduanya sudah dirotasi sebelumnya, tidak ada tindakan lanjut."
+##
+##   - task: "Stock movements endpoint enriched with actor_name"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/routers/inventory.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "GET /api/ingredients/{iid}/movements sekarang aggregation pipeline: $match tenant+ingredient → $sort created_at DESC → $limit → $lookup ke users(id=actor_id) → $addFields actor_name (nullable) → $project _id&_actor removed. Auth/permission tidak berubah (require_feature INVENTORY + catalog.manage). Verifikasi manual via curl: response menyertakan actor_name='Satria Ayudha' untuk SALE_OUT. Full pytest suite 23/23 tetap lolos setelah perubahan."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "COMPREHENSIVE STOCK MOVEMENTS ENDPOINT VERIFICATION COMPLETE ✅✅✅. All 6 required test scenarios passed successfully. (1) CONTRACT CHECK ✅: Tested GET /api/ingredients/{iid}/movements with OWNER credentials. Response structure verified: All required fields present (id, tenant_id, ingredient_id, type, qty_change, reference_type, reference_id, note, actor_id, created_at, actor_name) ✅. No forbidden fields (_id, _actor) in response ✅. actor_name field present with correct values (e.g., 'Satria Ayudha' for OWNER's movements) ✅. Movements sorted by created_at descending (newest first) ✅. Retrieved 10 movements, all with actor_name='Satria Ayudha' for SALE_OUT type. (2) FALLBACK NULL ✅: Code review verified $ifNull implementation at line 126 of /app/backend/routers/inventory.py: actor_name uses $ifNull with $arrayElemAt fallback to None when actor_id does not match any user ✅. (3) TENANT ISOLATION ✅: GET /api/ingredients/{random_uuid}/movements returns HTTP 404 (not 200 empty, not 500) ✅. (4) RBAC ✅: Cashier login successful, GET /api/ingredients/{valid_id}/movements returns HTTP 403 FORBIDDEN (not 401/200/500) ✅. Correctly enforces require_feature('INVENTORY') + catalog.manage permission. (5) LIMIT CAP ✅: GET /api/ingredients/{id}/movements?limit=1000 returns HTTP 200 (limit capped to 500 server-side, no 400 error) ✅. (6) REGRESSION ✅: Full pytest suite executed with all required environment variables. Results: 23 tests passed in 66.64s (backend_smoke_test.py: 13 passed, reports_smoke_test.py: 5 passed, inventory_smoke_test.py: 5 passed) ✅. No test failures, no regressions detected. Backend supervisor: RUNNING. NO CODE CHANGES MADE. Stock movements endpoint enriched with actor_name is FULLY FUNCTIONAL and production-ready."
+##
+## frontend:
+##   - task: "Ingredients stock history modal"
+##     implemented: true
+##     working: "NA"
+##     file: "/app/frontend/src/pages/management/IngredientsPage.jsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Tombol 'Riwayat' (data-testid=ingredient-history-{id}) di setiap baris ingredient, di samping 'Sesuaikan Stok'. Klik memanggil GET /api/ingredients/{id}/movements?limit=200 lalu buka modal (data-testid=ingredient-history-modal) berisi tabel: Tanggal (WIB Asia/Jakarta), Jenis (badge warna: PURCHASE_IN emerald, SALE_OUT sky, ADJUSTMENT amber, WASTE rose), Perubahan (+/- warna emerald/rose), Catatan, Oleh (actor_name atau 'Sistem (order)' untuk reference_type=order). State: history-loading, history-error, history-empty. Tombol close: history-close."
 ##
 ## agent_communication:
 ##     -agent: "main"
@@ -560,3 +602,7 @@
 ##     -message: "FASE 2 INVENTORY BACKEND COMPREHENSIVE TESTING COMPLETE ✅✅✅. ALL REQUIRED SCENARIOS PASSED WITH NO ISSUES. Created comprehensive test suite covering all 8 required scenarios (a-h) plus low-stock endpoint. SUMMARY: (a) Feature+permission gating: CASHIER blocked (403) on all inventory endpoints, OWNER/MANAGER have access ✅. (b) Ingredient CRUD: create/list/patch working, stock_qty NOT editable via PATCH ✅. (c) Adjust records movement: WASTE/PURCHASE_IN/ADJUSTMENT types work, movements recorded, qty_change=0 rejected (400), invalid type rejected (400) ✅. (d) Recipe CRUD+uniqueness: create/list/patch/delete working, duplicate recipe rejected (409), invalid product_id/ingredient_id rejected (400) ✅. (e) Order deduction (MOST IMPORTANT): recipe created, order placed, stock decreased by qty_per_unit*order.qty exactly, SALE_OUT movement recorded with order reference ✅. (f) Order succeeds without recipe: deleted recipes, order still returns 200 PAID (best-effort) ✅. (g) Concurrency/atomicity: 10 parallel orders, final stock=start-100 exactly, NO race condition ✅. (h) Tenant isolation: random UUID returns 404, queries filtered by tenant_id ✅. Low-stock endpoint: returns ingredients where stock_qty<=low_stock_threshold ✅. PYTEST SUITES: backend_smoke_test.py (13 passed), reports_smoke_test.py (5 passed), inventory_smoke_test.py (5 passed). Total: 23 tests passed, 0 failed. Backend logs clean. All Fase 2 Inventory backend requirements FULLY FUNCTIONAL and production-ready. NO CODE CHANGES MADE."
 ##     -agent: "testing"
 ##     -message: "FASE 2 INVENTORY FRONTEND COMPREHENSIVE TESTING COMPLETE ✅✅✅. Executed all 12 numbered test scenarios from review request. RESULTS: 19/20 tests passed, 1 minor timeout (KITCHEN dashboard load, but redirects worked). ALL CRITICAL FUNCTIONALITY VERIFIED: (1) PRO OWNER sees Ingredients & Recipes in sidebar ✅, (2) Create ingredient 'Susu UHT' with all fields ✅, (3) Adjust stock WASTE -100 decreases stock correctly ✅, (4) Adjust stock PURCHASE_IN +500 increases stock correctly ✅, (5) Low-stock 'MENIPIS' badge appears ✅, (6) Recipe creation with ingredient qty 50 ✅, (7) Recipe delete functionality ✅, (8) Dashboard low-stock alert banner with 'Kelola stok' link ✅, (9) CASHIER sidebar does NOT show Ingredients/Recipes ✅, (10) CASHIER direct URL access to /management/ingredients redirects to / ✅, (11) CASHIER direct URL access to /management/recipes redirects to / ✅, (12) KITCHEN sidebar does NOT show Ingredients/Recipes ✅, (13) KITCHEN direct URL access redirects work ✅, (14) FREE OWNER sidebar does NOT show Ingredients/Recipes (feature-gated) ✅, (15) FREE OWNER direct URL access to /management/ingredients shows UPGRADE MESSAGE (not error/blank/redirect) ✅, (16) FREE OWNER direct URL access to /management/recipes shows UPGRADE MESSAGE ✅. Console logs show expected 401s during auth transitions, CDN analytics failures (non-blocking), and one minor React hydration warning. NO CODE CHANGES MADE. All Fase 2 Inventory frontend requirements FULLY FUNCTIONAL and production-ready."
+##     -agent: "main"
+##     -message: "Stock movements endpoint enriched with actor_name. Aggregation pipeline implemented with $lookup to users collection, $addFields actor_name with $ifNull fallback, and $project to remove _id and _actor. Manual verification via curl confirmed actor_name field present. Full pytest suite 23/23 passed. Ingredients stock history modal implemented in frontend with 'Riwayat' button, modal displaying movements table with actor_name or 'Sistem (order)' for order reference_type. Ready for testing."
+##     -agent: "testing"
+##     -message: "STOCK MOVEMENTS ENDPOINT ENRICHED WITH ACTOR_NAME VERIFICATION COMPLETE ✅✅✅. All 6 required test scenarios passed successfully. SUMMARY: (1) CONTRACT CHECK: Response structure verified with all required fields (id, tenant_id, ingredient_id, type, qty_change, reference_type, reference_id, note, actor_id, created_at, actor_name) ✅. No forbidden fields (_id, _actor) ✅. actor_name field present with correct values ('Satria Ayudha' for OWNER movements) ✅. Movements sorted by created_at descending ✅. (2) FALLBACK NULL: Code review verified $ifNull implementation at line 126 with fallback to None for non-existent actor_id ✅. (3) TENANT ISOLATION: Random UUID returns 404 ✅. (4) RBAC: Cashier gets 403 FORBIDDEN ✅. (5) LIMIT CAP: limit=1000 returns 200 (capped to 500 server-side) ✅. (6) REGRESSION: Full pytest suite 23 tests passed in 66.64s (backend_smoke_test: 13, reports_smoke_test: 5, inventory_smoke_test: 5) ✅. NO CODE CHANGES MADE. Stock movements endpoint is FULLY FUNCTIONAL and production-ready."

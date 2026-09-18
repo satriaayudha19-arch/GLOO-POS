@@ -111,9 +111,23 @@ async def list_movements(iid: str, ent=Depends(require_feature("INVENTORY")), li
     ing = await db.ingredients.find_one({"id": iid, "tenant_id": user["tenant_id"]}, PROJ)
     if not ing:
         err(404, "INGREDIENT_NOT_FOUND", "Ingredient not found")
-    return await db.stock_movements.find(
-        {"tenant_id": user["tenant_id"], "ingredient_id": iid}, PROJ
-    ).sort("created_at", -1).to_list(min(limit, 500))
+    capped = max(1, min(limit, 500))
+    pipeline = [
+        {"$match": {"tenant_id": user["tenant_id"], "ingredient_id": iid}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": capped},
+        {"$lookup": {
+            "from": "users",
+            "localField": "actor_id",
+            "foreignField": "id",
+            "as": "_actor",
+        }},
+        {"$addFields": {
+            "actor_name": {"$ifNull": [{"$arrayElemAt": ["$_actor.name", 0]}, None]},
+        }},
+        {"$project": {"_id": 0, "_actor": 0}},
+    ]
+    return await db.stock_movements.aggregate(pipeline).to_list(capped)
 
 
 # ---------- Recipes (BOM) ----------

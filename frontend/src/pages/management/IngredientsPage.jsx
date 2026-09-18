@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, SlidersHorizontal, Lock } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, Lock, History, X } from "lucide-react";
 import { toast } from "sonner";
 import api, { apiError } from "../../lib/api";
 import PageHeader from "../../components/PageHeader";
@@ -12,6 +12,29 @@ const ADJ_TYPES = [
   { value: "WASTE", label: "Terbuang / rusak" },
   { value: "ADJUSTMENT", label: "Koreksi stok" },
 ];
+
+const MOVEMENT_TYPE_LABELS = {
+  PURCHASE_IN: { label: "Pembelian", cls: "bg-emerald-500/15 text-emerald-400" },
+  SALE_OUT: { label: "Penjualan", cls: "bg-sky-500/15 text-sky-400" },
+  ADJUSTMENT: { label: "Koreksi", cls: "bg-amber-500/15 text-amber-400" },
+  WASTE: { label: "Terbuang", cls: "bg-rose-500/15 text-rose-400" },
+};
+
+function formatMovementDate(iso) {
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 function UpgradeNotice() {
   return (
@@ -33,9 +56,22 @@ export default function IngredientsPage() {
   const [editing, setEditing] = useState(null); // form object | null
   const [isNew, setIsNew] = useState(false);
   const [adjust, setAdjust] = useState(null); // { ingredient, type, qty_change, note }
+  const [history, setHistory] = useState(null); // { ingredient, loading, rows, error }
 
   const load = () => {
     api.get("/ingredients").then((r) => setItems(r.data)).catch((e) => toast.error(apiError(e)));
+  };
+
+  const openHistory = async (ingredient) => {
+    setHistory({ ingredient, loading: true, rows: [], error: null });
+    try {
+      const r = await api.get(`/ingredients/${ingredient.id}/movements`, { params: { limit: 200 } });
+      setHistory({ ingredient, loading: false, rows: r.data || [], error: null });
+    } catch (err) {
+      const msg = apiError(err);
+      setHistory({ ingredient, loading: false, rows: [], error: msg });
+      toast.error(msg);
+    }
   };
   useEffect(() => {
     if (enabled) load();
@@ -137,9 +173,14 @@ export default function IngredientsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button data-testid={`ingredient-adjust-${i.id}`} onClick={() => setAdjust({ ingredient: i, type: "PURCHASE_IN", qty_change: "", note: "" })} className="h-8 px-3 rounded-lg bg-secondary text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-accent">
-                      <SlidersHorizontal size={13} /> Sesuaikan Stok
-                    </button>
+                    <div className="inline-flex items-center gap-1.5">
+                      <button data-testid={`ingredient-history-${i.id}`} onClick={() => openHistory(i)} className="h-8 px-3 rounded-lg bg-secondary text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-accent">
+                        <History size={13} /> Riwayat
+                      </button>
+                      <button data-testid={`ingredient-adjust-${i.id}`} onClick={() => setAdjust({ ingredient: i, type: "PURCHASE_IN", qty_change: "", note: "" })} className="h-8 px-3 rounded-lg bg-secondary text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-accent">
+                        <SlidersHorizontal size={13} /> Sesuaikan Stok
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -198,6 +239,67 @@ export default function IngredientsPage() {
             <input data-testid="adjust-note" value={adjust.note} onChange={(e) => setAdjust({ ...adjust, note: e.target.value })} placeholder="Catatan (opsional)" className="w-full h-11 px-3 rounded-lg bg-secondary border border-border text-sm focus:border-primary focus:outline-none" />
             <button type="submit" data-testid="adjust-submit" className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-bold text-sm">Simpan Penyesuaian</button>
           </form>
+        </div>
+      )}
+
+      {history && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setHistory(null)}>
+          <div className="bg-card border border-border w-full max-w-3xl rounded-2xl p-6 space-y-4 max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()} data-testid="ingredient-history-modal">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-heading text-lg font-bold">Riwayat Stok · {history.ingredient.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  Stok sekarang: <span className="font-mono font-bold text-foreground">{history.ingredient.stock_qty} {history.ingredient.unit}</span>
+                  {history.rows.length > 0 && (<> · <span className="font-mono">{history.rows.length}</span> pergerakan</>)}
+                </p>
+              </div>
+              <button data-testid="history-close" onClick={() => setHistory(null)} className="h-8 w-8 rounded-lg bg-secondary hover:bg-accent flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto rounded-xl border border-border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-3 py-2">Tanggal (WIB)</th>
+                    <th className="px-3 py-2">Jenis</th>
+                    <th className="px-3 py-2 text-right">Perubahan</th>
+                    <th className="px-3 py-2">Catatan</th>
+                    <th className="px-3 py-2">Oleh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.loading && (
+                    <tr><td colSpan={5} className="px-3 py-10 text-center text-muted-foreground" data-testid="history-loading">Memuat riwayat…</td></tr>
+                  )}
+                  {!history.loading && history.error && (
+                    <tr><td colSpan={5} className="px-3 py-10 text-center text-rose-400" data-testid="history-error">{history.error}</td></tr>
+                  )}
+                  {!history.loading && !history.error && history.rows.length === 0 && (
+                    <tr><td colSpan={5} className="px-3 py-10 text-center text-muted-foreground" data-testid="history-empty">Belum ada pergerakan stok.</td></tr>
+                  )}
+                  {!history.loading && !history.error && history.rows.map((m) => {
+                    const meta = MOVEMENT_TYPE_LABELS[m.type] || { label: m.type, cls: "bg-secondary text-muted-foreground" };
+                    const positive = Number(m.qty_change) > 0;
+                    return (
+                      <tr key={m.id} data-testid={`history-row-${m.id}`} className="border-b border-border/50 hover:bg-secondary/40">
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{formatMovementDate(m.created_at)}</td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-1 rounded-md text-[11px] font-bold ${meta.cls}`}>{meta.label}</span>
+                        </td>
+                        <td className={`px-3 py-2 text-right font-mono font-bold ${positive ? "text-emerald-400" : "text-rose-400"}`}>
+                          {positive ? "+" : ""}{m.qty_change} {history.ingredient.unit}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground max-w-[240px] truncate" title={m.note || ""}>{m.note || "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{m.actor_name || (m.reference_type === "order" ? "Sistem (order)" : "—")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>
