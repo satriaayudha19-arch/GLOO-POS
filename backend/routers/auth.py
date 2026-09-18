@@ -13,9 +13,33 @@ from security import (
 )
 import jwt
 from tenant_provisioning import provision_tenant
-from utils import err, log_audit
+from utils import client_ip, err, log_audit
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+EMAIL_VERIFICATION_TTL_HOURS = 72
+
+
+def _build_verify_link(token: str) -> str:
+    base = os.environ.get("APP_URL") or (os.environ.get("CORS_ORIGINS", "").split(",")[0] if os.environ.get("CORS_ORIGINS") else "")
+    base = (base or "").rstrip("/")
+    return f"{base}/verify-email?token={token}" if base else f"/verify-email?token={token}"
+
+
+async def _create_email_verification_token(user_id: str, tenant_id: str | None, email: str) -> str:
+    token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    await db.email_verification_tokens.insert_one({
+        "token": token,
+        "user_id": user_id,
+        "tenant_id": tenant_id,
+        "email": email.lower(),
+        "used": False,
+        "created_at": now,
+        "expires_at": now + timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
+    })
+    return token
 
 
 class LoginBody(BaseModel):
@@ -28,6 +52,9 @@ async def build_session_payload(user: dict) -> dict:
         "user": {k: user.get(k) for k in ("id", "code", "name", "email", "role", "outlet_ids")},
         "permissions": permissions_for(user["role"]),
         "tenant": None, "features": {}, "subscription": None, "outlets": [],
+        # email_verified: default True for pre-existing users without the field
+        # (only new self-service signups start with False)
+        "email_verified": bool(user.get("email_verified", True)),
     }
     if user["role"] == "PLATFORM_ADMIN":
         return payload
@@ -67,7 +94,8 @@ SIGNUP_RATE_WINDOW_MIN = 60     # per hour
 @router.post("/signup")
 async def signup(body: SignupBody, request: Request, response: Response):
     # 1) Rate limit per IP (5/hour). Collection has TTL index on expires_at.
-    ip = request.client.host if request.client else "unknown"
+    #    client_ip() reads X-Forwarded-For so users behind a reverse proxy each get their own bucket.
+    ip = client_ip(request)
     now = datetime.now(timezone.utc)
     attempt = await db.signup_attempts.find_one({"_id": ip})
 
@@ -141,6 +169,19 @@ async def signup(body: SignupBody, request: Request, response: Response):
 
     # 6) Auto-login: set cookies and return session payload
     user = await db.users.find_one({"id": result["user_id"]})
+    # 6a) Mark this user as email-unverified (self-signup only)
+    await db.users.update_one({"id": user["id"]}, {"$set": {"email_verified": False}})
+    user["email_verified"] = False
+    # 6b) Create verification token + log link (no mail service yet)
+    try:
+        verify_token = await _create_email_verification_token(user["id"], user.get("tenant_id"), user["email"])
+        link = _build_verify_link(verify_token)
+        import logging
+        logging.getLogger(__name__).info("EMAIL_VERIFICATION_LINK for %s: %s", user["email"], link)
+    except Exception:
+        # Non-fatal: signup still succeeds; user can request resend later.
+        import logging
+        logging.getLogger(__name__).exception("Failed to create email verification token for %s", user["email"])
     set_auth_cookies(response, user["id"], user["email"])
     user.pop("password_hash", None)
     user.pop("_id", None)
@@ -155,7 +196,7 @@ async def signup(body: SignupBody, request: Request, response: Response):
 @router.post("/login")
 async def login(body: LoginBody, request: Request, response: Response):
     email = body.email.lower()
-    ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request)
     key = f"{ip}:{email}"
     attempt = await db.login_attempts.find_one({"_id": key})
     if attempt and attempt.get("count", 0) >= 5:
@@ -269,4 +310,63 @@ async def reset_password(body: ResetBody):
         err(400, "INVALID_TOKEN", "Reset token invalid or expired")
     await db.users.update_one({"id": doc["user_id"]}, {"$set": {"password_hash": hash_password(body.password)}})
     await db.password_reset_tokens.update_one({"token": body.token}, {"$set": {"used": True}})
+    return {"ok": True}
+
+
+class VerifyEmailBody(BaseModel):
+    token: str
+
+
+@router.post("/verify-email")
+async def verify_email(body: VerifyEmailBody):
+    doc = await db.email_verification_tokens.find_one({"token": body.token})
+    if not doc:
+        err(400, "INVALID_TOKEN", "Verification link invalid")
+    if doc.get("used"):
+        # Idempotent: already used tokens still return ok so a user clicking twice sees success.
+        user = await db.users.find_one({"id": doc["user_id"]}, {"_id": 0, "email": 1})
+        return {"ok": True, "already_verified": True, "email": user.get("email") if user else None}
+    expires_at = doc.get("expires_at")
+    if expires_at:
+        exp = expires_at if expires_at.tzinfo else expires_at.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            err(400, "TOKEN_EXPIRED", "Verification link expired. Please request a new one.")
+    now = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"id": doc["user_id"]},
+        {"$set": {"email_verified": True, "email_verified_at": now}},
+    )
+    await db.email_verification_tokens.update_one(
+        {"token": body.token},
+        {"$set": {"used": True, "used_at": now}},
+    )
+    user = await db.users.find_one({"id": doc["user_id"]}, {"_id": 0, "email": 1, "tenant_id": 1})
+    if user:
+        await log_audit(user.get("tenant_id"), None, user, "EMAIL_VERIFIED", "user", doc["user_id"])
+    return {"ok": True, "email": user.get("email") if user else None}
+
+
+@router.post("/resend-verification")
+async def resend_verification(request: Request, user=Depends(get_current_user)):
+    # Rate limit resend: 1 per minute per user
+    now = datetime.now(timezone.utc)
+    fresh_user = await db.users.find_one({"id": user["id"]}, {"_id": 0})
+    if not fresh_user:
+        err(404, "USER_NOT_FOUND", "User not found")
+    if fresh_user.get("email_verified"):
+        return {"ok": True, "already_verified": True}
+    # Check most recent unused token: throttle if just created in last 60s
+    last = await db.email_verification_tokens.find_one(
+        {"user_id": user["id"], "used": False},
+        sort=[("created_at", -1)],
+    )
+    if last and last.get("created_at"):
+        created = last["created_at"]
+        created_aw = created if created.tzinfo else created.replace(tzinfo=timezone.utc)
+        if (now - created_aw) < timedelta(seconds=60):
+            err(429, "RESEND_COOLDOWN", "Please wait a minute before requesting another link.")
+    token = await _create_email_verification_token(user["id"], user.get("tenant_id"), user["email"])
+    link = _build_verify_link(token)
+    import logging
+    logging.getLogger(__name__).info("EMAIL_VERIFICATION_LINK for %s (resend): %s", user["email"], link)
     return {"ok": True}

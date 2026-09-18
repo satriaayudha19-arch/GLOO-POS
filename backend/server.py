@@ -48,6 +48,9 @@ async def ensure_indexes():
     await db.password_reset_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.login_attempts.create_index("locked_until", expireAfterSeconds=0)
     await db.signup_attempts.create_index("expires_at", expireAfterSeconds=0)
+    await db.email_verification_tokens.create_index("expires_at", expireAfterSeconds=0)
+    await db.email_verification_tokens.create_index("token", unique=True)
+    await db.email_verification_tokens.create_index([("user_id", 1), ("used", 1), ("created_at", -1)])
 
 
 async def initialize_database():

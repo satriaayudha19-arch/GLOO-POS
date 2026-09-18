@@ -51,6 +51,31 @@ def err(status: int, code: str, message: str = None):
     raise HTTPException(status_code=status, detail={"code": code, "message": message or code})
 
 
+def client_ip(request) -> str:
+    """Return the real client IP.
+
+    Prefer X-Forwarded-For / X-Real-IP (set by reverse proxies like nginx / Kubernetes ingress /
+    Cloudflare) over request.client.host, which in production is the proxy's IP and would cause
+    all users to share the same rate-limit bucket.
+
+    Only the LEFT-MOST IP in X-Forwarded-For is used (that's the original client per RFC 7239 in
+    a well-behaved proxy chain). This trusts the proxy header unconditionally — deploy this app
+    behind a proxy that strips/rewrites X-Forwarded-For from untrusted clients.
+    """
+    if request is None:
+        return "unknown"
+    headers = getattr(request, "headers", {}) or {}
+    xff = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for")
+    if xff:
+        first = xff.split(",")[0].strip()
+        if first:
+            return first
+    real = headers.get("X-Real-IP") or headers.get("x-real-ip")
+    if real and real.strip():
+        return real.strip()
+    return request.client.host if request.client else "unknown"
+
+
 async def next_seq(key: str) -> int:
     doc = await db.counters.find_one_and_update(
         {"_id": key}, {"$inc": {"seq": 1}}, upsert=True, return_document=ReturnDocument.AFTER

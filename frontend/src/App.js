@@ -7,6 +7,9 @@ import Layout from "@/components/Layout";
 import PlatformLayout from "@/components/PlatformLayout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import VerifyEmail from "@/pages/VerifyEmail";
+import TermsPage from "@/pages/legal/TermsPage";
+import PrivacyPage from "@/pages/legal/PrivacyPage";
 import DashboardPage from "@/pages/DashboardPage";
 import POSPage from "@/pages/POSPage";
 import OrdersPage from "@/pages/OrdersPage";
@@ -102,6 +105,9 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
             <Route
               path="/platform/*"
               element={

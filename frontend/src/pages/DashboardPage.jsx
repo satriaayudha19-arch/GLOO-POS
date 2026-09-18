@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { DollarSign, ReceiptText, TrendingUp, Clock, ShoppingBag, AlertTriangle } from "lucide-react";
-import api from "../lib/api";
+import { DollarSign, ReceiptText, TrendingUp, Clock, ShoppingBag, AlertTriangle, MailCheck, X } from "lucide-react";
+import { toast } from "sonner";
+import api, { apiError } from "../lib/api";
 import { money, fmtTime } from "../lib/format";
 import { usePos } from "../context/PosContext";
 import { useAuth } from "../context/AuthContext";
@@ -24,9 +25,11 @@ function StatCard({ icon: Icon, label, value, sub, testid }) {
 
 export default function DashboardPage() {
   const { outletId, outlet, shift } = usePos();
-  const { hasFeature, hasPerm } = useAuth();
+  const { hasFeature, hasPerm, session } = useAuth();
   const [data, setData] = useState(null);
   const [lowStock, setLowStock] = useState([]);
+  const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
 
   useEffect(() => {
     const params = outletId ? { outlet_id: outletId } : {};
@@ -39,6 +42,20 @@ export default function DashboardPage() {
     }
   }, [hasFeature, hasPerm]);
 
+  const showEmailBanner = session && session.user && session.email_verified === false && !emailBannerDismissed;
+
+  const resendVerification = async () => {
+    setResendBusy(true);
+    try {
+      await api.post("/auth/resend-verification");
+      toast.success("Link verifikasi baru sudah dikirim ke inbox kamu.");
+    } catch (e) {
+      toast.error(apiError(e));
+    } finally {
+      setResendBusy(false);
+    }
+  };
+
   return (
     <div data-testid="dashboard-page">
       <PageHeader
@@ -46,6 +63,43 @@ export default function DashboardPage() {
         subtitle={outlet ? `${outlet.name} · ${new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}` : ""}
         testid="dashboard-header"
       />
+      {showEmailBanner && (
+        <div
+          data-testid="verify-email-banner"
+          className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-4"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+            <MailCheck size={18} className="text-amber-400" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="font-heading font-bold text-sm text-amber-100">
+              Verifikasi email kamu
+            </p>
+            <p className="text-xs text-amber-200/80 leading-relaxed">
+              Kami sudah mengirim link verifikasi ke{" "}
+              <span className="font-semibold text-amber-100">{session.user.email}</span>.
+              Kamu tetap bisa pakai aplikasi seperti biasa, tapi verifikasi diperlukan sebelum
+              nanti bisa mengubah email pemulihan dan menerima notifikasi tagihan.
+            </p>
+            <button
+              onClick={resendVerification}
+              disabled={resendBusy}
+              data-testid="verify-email-resend"
+              className="mt-2 h-8 px-3 rounded-lg bg-amber-500 text-amber-950 text-xs font-bold hover:bg-amber-400 disabled:opacity-60"
+            >
+              {resendBusy ? "Mengirim…" : "Kirim ulang link verifikasi"}
+            </button>
+          </div>
+          <button
+            onClick={() => setEmailBannerDismissed(true)}
+            data-testid="verify-email-dismiss"
+            className="w-8 h-8 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 flex items-center justify-center shrink-0"
+            aria-label="Tutup"
+          >
+            <X size={16} className="text-amber-300" />
+          </button>
+        </div>
+      )}
       {lowStock.length > 0 && (
         <div data-testid="low-stock-alert" className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 mb-4">
           <div className="flex items-center justify-between gap-3 mb-2">
